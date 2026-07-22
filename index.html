@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Registro Spese</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#F5F6F8">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0F1114">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<header>
+  <div class="hwrap">
+    <h1 id="app-title">Registro Spese</h1>
+    <button class="iconcircle" id="btn-scan" title="Scansiona una spesa"></button>
+  </div>
+</header>
+
+<main id="main"></main>
+
+<button class="fab" id="btn-add" title="Aggiungi spesa"></button>
+<nav><div class="tabs" id="tabs"></div></nav>
+<input type="file" id="scan-input" accept="image/*" style="display:none">
+
+<!-- altro menu -->
+<div class="overlay" id="altro-overlay">
+  <div class="sheet">
+    <div class="grab"></div>
+    <div class="menu-row" data-act="go" data-id="risparmi"><span class="menu-ic" data-ic="piggy"></span><div style="flex:1">Risparmi<div class="small">Accantonamento fiscale e obiettivi</div></div><span data-ic="chev-r" style="color:var(--muted)"></span></div>
+    <div class="menu-row" data-act="go" data-id="entrate"><span class="menu-ic" data-ic="euro"></span><div style="flex:1">Entrate<div class="small">Guadagni, import da Excel fatture</div></div><span data-ic="chev-r" style="color:var(--muted)"></span></div>
+    <div class="menu-row" data-act="go" data-id="categorie"><span class="menu-ic" data-ic="tag"></span><div style="flex:1">Categorie spese<div class="small">Nomi, colori, nuove etichette</div></div><span data-ic="chev-r" style="color:var(--muted)"></span></div>
+    <div class="menu-row" data-act="go" data-id="cat-entrate"><span class="menu-ic" data-ic="euro"></span><div style="flex:1">Categorie entrate<div class="small">Etichette per i guadagni</div></div><span data-ic="chev-r" style="color:var(--muted)"></span></div>
+    <div class="menu-row" data-act="go" data-id="impostazioni"><span class="menu-ic" data-ic="sliders"></span><div style="flex:1">Impostazioni<div class="small">Scansione IA, Google, backup, aggiornamenti</div></div><span data-ic="chev-r" style="color:var(--muted)"></span></div>
+  </div>
+</div>
+
+<!-- form modal -->
+<div class="overlay" id="form-overlay">
+  <div class="sheet">
+    <div class="grab"></div>
+    <h2 id="form-title">Nuova spesa</h2>
+    <div class="mb"><label class="label">Descrizione</label>
+      <input class="input" id="f-desc" placeholder="Es. Assicurazione moto"></div>
+    <div class="frow mb">
+      <div><label class="label">Importo (€)</label>
+        <input class="input" id="f-amount" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0,00"></div>
+      <div><label class="label" id="f-date-label">Data</label>
+        <input class="input" id="f-date" type="date"></div>
+    </div>
+    <div class="mb"><label class="label">Categoria</label>
+      <div class="chips" id="f-cats"></div></div>
+    <div class="toggle mb" id="f-rec-toggle">
+      <input type="checkbox" id="f-rec" style="width:19px;height:19px;accent-color:var(--accent);pointer-events:none">
+      <div><div style="font-weight:700;font-size:14px">Spesa ricorrente</div>
+        <div class="small">Si ripete e compare in scadenzario e calendario</div></div>
+    </div>
+    <div class="mb" id="f-freq-wrap" style="display:none"><label class="label">Frequenza</label>
+      <div class="chips" id="f-freqs"></div></div>
+    <div class="mb" id="f-var-wrap" style="display:none">
+      <div class="toggle" id="f-var-toggle">
+        <input type="checkbox" id="f-var" style="width:19px;height:19px;accent-color:var(--accent);pointer-events:none">
+        <div><div style="font-weight:700;font-size:14px">Importo variabile (bollette)</div>
+          <div class="small">Registri l'importo reale a ogni periodo; l'app stima i futuri dalla bolletta di un anno prima. Lascia l'importo vuoto se non lo conosci ancora.</div></div>
+      </div>
+    </div>
+    <div class="frow" style="margin-top:16px">
+      <button class="btn btn-ghost" style="flex:1" id="btn-cancel">Annulla</button>
+      <button class="btn btn-primary" style="flex:2" id="btn-save">Aggiungi spesa</button>
+    </div>
+  </div>
+</div>
+
+<!-- category editor modal -->
+<div class="overlay" id="cat-overlay">
+  <div class="sheet">
+    <div class="grab"></div>
+    <h2 id="cat-title">Nuova categoria</h2>
+    <div class="mb"><label class="label">Nome</label>
+      <input class="input" id="c-name" placeholder="Es. Villa, Formazione, Viaggi…"></div>
+    <div class="mb"><label class="label">Colore etichetta</label>
+      <div class="chips" id="c-colors"></div></div>
+    <div class="mb" id="c-rate-wrap" style="display:none"><label class="label">% da accantonare (fondo tasse)</label>
+      <input class="input" id="c-rate" type="number" inputmode="decimal" min="0" max="100" step="1" placeholder="Predefinita">
+      <div class="small" style="margin-top:5px">Lascia vuoto per usare la percentuale predefinita. Es. 0 per rimborsi non tassabili.</div></div>
+    <div class="frow" style="margin-top:8px">
+      <button class="btn btn-ghost" style="flex:1" id="cat-cancel">Annulla</button>
+      <button class="btn btn-primary" style="flex:2" id="cat-save">Salva categoria</button>
+    </div>
+  </div>
+</div>
+
+<!-- template editor modal -->
+<div class="overlay" id="tpe-overlay">
+  <div class="sheet">
+    <div class="grab"></div>
+    <h2 id="tpe-title">Nuova voce</h2>
+    <div class="mb"><label class="label">Nome</label>
+      <input class="input" id="t-desc" placeholder="Es. Retta palestra"></div>
+    <div class="mb"><label class="label">Categoria</label>
+      <div class="chips" id="t-cats"></div></div>
+    <div class="mb"><label class="label">Frequenza</label>
+      <div class="chips" id="t-freqs"></div></div>
+    <div class="toggle mb" id="t-var-toggle">
+      <input type="checkbox" id="t-var" style="width:19px;height:19px;accent-color:var(--accent);pointer-events:none">
+      <div><div style="font-weight:700;font-size:14px">Importo variabile</div>
+        <div class="small">Come le bollette: registri l'importo reale a ogni periodo</div></div>
+    </div>
+    <div class="mb"><label class="label">Importo (€)</label>
+      <input class="input" id="t-amount" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0,00">
+      <div class="small" style="margin-top:5px">Facoltativo per le voci variabili, obbligatorio per quelle fisse.</div></div>
+    <div class="frow" style="margin-top:8px">
+      <button class="btn btn-ghost" style="flex:1" id="tpe-cancel">Annulla</button>
+      <button class="btn btn-primary" style="flex:2" id="tpe-save">Salva voce</button>
+    </div>
+  </div>
+</div>
+
+<!-- templates catalog modal -->
+<div class="overlay" id="tpl-overlay">
+  <div class="sheet">
+    <div class="grab"></div>
+    <h2>Spese suggerite</h2>
+    <div class="small" style="margin-bottom:12px">Seleziona le voci che ti riguardano: vengono create come ricorrenti, pronte per registrare le bollette. Poi apri ciascuna con la matita per impostare la data della prima scadenza.</div>
+    <div id="tpl-list"></div>
+    <div class="frow" style="margin-top:16px">
+      <button class="btn btn-ghost" style="flex:1" id="tpl-cancel">Annulla</button>
+      <button class="btn btn-primary" style="flex:2" id="tpl-add">Aggiungi selezionate</button>
+    </div>
+  </div>
+</div>
+
+<!-- bill modal -->
+<div class="overlay" id="bill-overlay">
+  <div class="sheet">
+    <div class="grab"></div>
+    <h2>Registra bolletta</h2>
+    <div class="small" id="bill-name" style="margin-bottom:12px"></div>
+    <div class="frow mb">
+      <div><label class="label">Importo effettivo (€)</label>
+        <input class="input" id="b-amount" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0,00"></div>
+      <div><label class="label">Data bolletta</label>
+        <input class="input" id="b-date" type="date"></div>
+    </div>
+    <div class="frow" style="margin-top:8px">
+      <button class="btn btn-ghost" style="flex:1" id="bill-cancel">Annulla</button>
+      <button class="btn btn-primary" style="flex:2" id="bill-save">Salva importo</button>
+    </div>
+  </div>
+</div>
+
+<!-- income modal -->
+<div class="overlay" id="inc-overlay">
+  <div class="sheet">
+    <div class="grab"></div>
+    <h2 id="inc-title">Nuova entrata</h2>
+    <div class="mb"><label class="label">Descrizione</label>
+      <input class="input" id="i-desc" placeholder="Es. Fattura Randstad, modulo GOL"></div>
+    <div class="frow mb">
+      <div><label class="label">Importo (€)</label>
+        <input class="input" id="i-amount" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0,00"></div>
+      <div><label class="label" id="i-date-label">Data</label>
+        <input class="input" id="i-date" type="date"></div>
+    </div>
+    <div class="toggle mb" id="i-rec-toggle">
+      <input type="checkbox" id="i-rec" style="width:19px;height:19px;accent-color:var(--accent);pointer-events:none">
+      <div><div style="font-weight:700;font-size:14px">Entrata ricorrente</div>
+        <div class="small">Compenso fisso, canone: si ripete e compare nei mesi futuri del calendario</div></div>
+    </div>
+    <div class="mb" id="i-freq-wrap" style="display:none"><label class="label">Frequenza</label>
+      <div class="chips" id="i-freqs"></div></div>
+    <div class="mb"><label class="label">Categoria</label>
+      <div class="chips" id="i-cats"></div></div>
+    <div class="mb"><label class="label">% accantonamento (facoltativo)</label>
+      <input class="input" id="i-rate" type="number" inputmode="decimal" min="0" max="100" step="1" placeholder="Usa quella della categoria">
+      <div class="small" style="margin-top:5px">Compila solo per forzare una percentuale diversa da quella della categoria per questa entrata.</div></div>
+    <div class="frow" style="margin-top:8px">
+      <button class="btn btn-ghost" style="flex:1" id="inc-cancel">Annulla</button>
+      <button class="btn btn-primary" style="flex:2" id="inc-save">Salva entrata</button>
+    </div>
+  </div>
+</div>
+
+<!-- excel import modal -->
+<div class="overlay" id="imp-overlay">
+  <div class="sheet">
+    <div class="grab"></div>
+    <h2>Importa dall'Excel</h2>
+    <div id="imp-info"></div>
+    <div class="frow" style="margin-top:16px">
+      <button class="btn btn-ghost" style="flex:1" id="imp-cancel">Annulla</button>
+      <button class="btn btn-primary" style="flex:2" id="imp-confirm">Importa</button>
+    </div>
+  </div>
+</div>
+
+<!-- goal modal -->
+<div class="overlay" id="goal-overlay">
+  <div class="sheet">
+    <div class="grab"></div>
+    <h2 id="goal-title">Nuovo obiettivo</h2>
+    <div class="mb"><label class="label">Nome</label>
+      <input class="input" id="g-name" placeholder="Es. Fondo tasse, Vacanza, Emergenze"></div>
+    <div class="frow mb">
+      <div><label class="label">Traguardo (€)</label>
+        <input class="input" id="g-target" type="number" inputmode="decimal" min="0" step="1" placeholder="Facoltativo"></div>
+      <div><label class="label">Già versato (€)</label>
+        <input class="input" id="g-saved" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0,00"></div>
+    </div>
+    <div class="mb"><label class="label">Colore</label>
+      <div class="chips" id="g-colors"></div></div>
+    <div class="frow" style="margin-top:8px">
+      <button class="btn btn-ghost" style="flex:1" id="goal-cancel">Annulla</button>
+      <button class="btn btn-primary" style="flex:2" id="goal-save">Salva obiettivo</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="move-overlay">
+  <div class="sheet">
+    <div class="grab"></div>
+    <h2 id="move-title">Versa</h2>
+    <div class="small" id="move-name" style="margin-bottom:12px"></div>
+    <div class="mb"><label class="label">Importo (€)</label>
+      <input class="input" id="mv-amount" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0,00"></div>
+    <div class="frow" style="margin-top:8px">
+      <button class="btn btn-ghost" style="flex:1" id="move-cancel">Annulla</button>
+      <button class="btn btn-primary" style="flex:2" id="move-save">Conferma</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="tax-overlay">
+  <div class="sheet">
+    <div class="grab"></div>
+    <h2>Accantonamento fiscale</h2>
+    <div class="mb"><label class="label">Percentuale predefinita</label>
+      <input class="input" id="tx-rate" type="number" inputmode="decimal" min="0" max="100" step="1" placeholder="30">
+      <div class="small" style="margin-top:6px">Si applica alle entrate senza una percentuale propria o di categoria. Puoi impostare aliquote specifiche in "Categorie entrate" e forzarne una sulla singola entrata. Nel forfettario indicativamente 25–35%: verifica col commercialista.</div></div>
+    <div class="frow" style="margin-top:8px">
+      <button class="btn btn-ghost" style="flex:1" id="tax-cancel">Annulla</button>
+      <button class="btn btn-primary" style="flex:2" id="tax-save">Salva</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="txmove-overlay">
+  <div class="sheet">
+    <div class="grab"></div>
+    <h2 id="txmove-title">Registra accantonamento</h2>
+    <div class="small" style="margin-bottom:12px">Segna quanto hai davvero messo da parte per le tasse. Usa un importo negativo per correggere.</div>
+    <div class="mb"><label class="label">Importo (€)</label>
+      <input class="input" id="txm-amount" type="number" inputmode="decimal" step="0.01" placeholder="0,00"></div>
+    <div class="frow" style="margin-top:8px">
+      <button class="btn btn-ghost" style="flex:1" id="txmove-cancel">Annulla</button>
+      <button class="btn btn-primary" style="flex:2" id="txmove-save">Registra</button>
+    </div>
+  </div>
+</div>
+
+<!-- confirm modal -->
+<div class="overlay" id="confirm-overlay">
+  <div class="sheet">
+    <div class="grab"></div>
+    <h2 id="confirm-title">Confermi?</h2>
+    <div class="small" id="confirm-msg" style="margin-bottom:16px"></div>
+    <div class="frow">
+      <button class="btn btn-ghost" style="flex:1" id="confirm-no">Annulla</button>
+      <button class="btn btn-primary" style="flex:1" id="confirm-yes">Elimina</button>
+    </div>
+  </div>
+</div>
+
+<!-- toast -->
+<div id="toast" style="position:fixed;left:50%;bottom:calc(96px + env(safe-area-inset-bottom));
+  transform:translateX(-50%) translateY(20px);z-index:70;background:var(--ink);color:var(--card);
+  padding:12px 18px;border-radius:14px;font-size:13.5px;font-weight:600;box-shadow:var(--shadow);
+  display:flex;align-items:center;gap:14px;opacity:0;pointer-events:none;transition:all .25s;max-width:90vw">
+  <span id="toast-msg"></span>
+  <button id="toast-action" style="background:none;border:none;color:var(--accent-text);font-weight:800;
+    cursor:pointer;font-size:13.5px;padding:0">Annulla</button>
+</div>
+
+<!-- scanning spinner -->
+<div class="overlay" id="spin">
+  <div class="spinbox">
+    <div class="spin-ic" data-ic="camera-big"></div>
+    <div style="font-size:16px;font-weight:800;margin:10px 0 5px">Lettura in corso…</div>
+    <div class="small">Sto estraendo importo, data e categoria dall'immagine.</div>
+  </div>
+</div>
+
+
+<!-- Moduli applicativi: l'ordine di caricamento conta -->
+<script src="js/state.js"></script>
+<script src="js/calc.js"></script>
+<script src="js/drive.js"></script>
+<script src="js/charts.js"></script>
+<script src="js/render.js"></script>
+<script src="js/forms.js"></script>
+<script src="js/scan.js"></script>
+<script src="js/backup.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/events.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
