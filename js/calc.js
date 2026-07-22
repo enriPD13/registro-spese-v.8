@@ -16,6 +16,8 @@ const euroNum=v=>{
 const uid=p=>(p||"x")+Date.now().toString(36)+Math.random().toString(36).slice(2,7);
 const eurShort=n=>n>=1000?(n/1000).toFixed(1).replace(".",",")+"k":Math.round(n)+"€";
 const todayISO=()=>{const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");};
+/* legge una variabile colore del tema (usata dai grafici) */
+const cssv=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const catById=id=>S.categories.find(c=>c.id===id)||{name:"—",color:"#8B887C",id:"?"};
 const incCatById=id=>S.incCategories.find(c=>c.id===id)||{name:"—",color:"#0FA36B",id:"?"};

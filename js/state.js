@@ -33,7 +33,7 @@ function mountStaticIcons(){
 }
 
 /* ================= CONSTANTS ================= */
-const APP_V="8.0";
+const APP_V="8.2";
 const FREQS=[
   {id:"mensile",label:"Mensile",months:1},
   {id:"bimestrale",label:"Bimestrale",months:2},
@@ -86,7 +86,7 @@ const S={
   expenses:[],categories:DEFAULT_CATS.slice(),apiKey:"",
   tab:"riepilogo",viewY:now.getFullYear(),viewM:now.getMonth(),
   calY:now.getFullYear(),calM:now.getMonth(),selDay:null,
-  filterCat:"all",calFilter:"all",chartRange:6,search:"",busy:"",editId:null,notice:"",error:"",
+  filterCat:"all",calFilter:"all",chartRange:6,search:"",busy:"",fcMode:"mesi",fcYear:null,editId:null,notice:"",error:"",
   templates:[],gClientId:"",lastSync:0,savedAt:0,
   incomes:[],lastInvoiceSync:0,incCategories:DEFAULT_INC_CATS.slice(),
   goals:[],taxRate:30,taxSaved:[],

@@ -47,6 +47,7 @@ document.addEventListener("click",ev=>{
   else if(act==="cal-day"){S.selDay=Number(t.dataset.d);render();}
   else if(act==="cal-filter"){S.calFilter=t.dataset.id;render();}
   else if(act==="range"){S.chartRange=Number(t.dataset.n);render();}
+  else if(act==="fc-mode"){S.fcMode=t.dataset.id;render();}
   else if(act==="filter"){S.filterCat=t.dataset.id;render();}
   else if(act==="search-clear"){S.search="";render();}
   else if(act==="edit"){const e=S.expenses.find(x=>x.id===t.dataset.id);if(e){S.editId=e.id;openForm({...e,amount:e.amount!=null?String(e.amount):"",freq:e.freq||"mensile"});}}
@@ -227,6 +228,10 @@ let searchTimer=null;
 function afterRender(){
   if(S.tab==="riepilogo"){drawCharts();animateTotal();}
   if(S.tab==="entrate")drawIncomeCharts();
+  if(S.tab==="previsioni"){
+    if((S.fcMode||"mesi")==="mesi")drawForecastChart();
+    else drawForecastYearsChart();
+  }
   const sb=document.getElementById("search-box");
   if(sb){
     sb.addEventListener("input",ev=>{

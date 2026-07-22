@@ -22,6 +22,7 @@ js/
   calc.js                 calcoli: date, ricorrenze, importi, formattazione
   drive.js                sincronizzazione Google Drive e lettura fatture da Excel
   charts.js               grafici del Riepilogo
+  forecast.js             previsioni di cassa (profilo stagionale, proiezioni)
   render.js               disegno di tutte le schermate
   forms.js                moduli: spese, categorie, modelli, bollette
   scan.js                 scansione scontrini con IA
@@ -65,6 +66,21 @@ filtro Tutto / Entrate / Uscite.
 **Riepilogo** — totale del mese, ripartizione per categoria, approfondimenti
 automatici sui tuoi dati e tre grafici di andamento con intervallo regolabile
 (3, 6, 12 o 24 mesi).
+
+**Previsioni** — stima di cassa costruita sulle abitudini reali di incasso: dagli
+anni completi si ricava quanto pesa ogni mese sul totale annuo (profilo stagionale),
+si proietta il totale dell'anno in corso a partire dai mesi già chiusi e lo si
+ridistribuisce sui mesi futuri. Le voci ricorrenti non sono stimate ma calcolate.
+La vista annuale usa esclusivamente gli anni completi, escludendo quello in corso.
+
+Gli anni non pesano tutti uguale: ogni anno più vecchio vale il 60% del successivo
+(circa 51/31/18% con tre anni), così il modello segue i cambiamenti reali
+dell'attività senza buttare via lo storico. La tendenza di crescita o calo viene
+rilevata automaticamente dalle variazioni annuali, ponderata sulle più recenti e
+limitata prudenzialmente fra -40% e +50% l'anno per non estrapolare valori estremi.
+Sull'anno in corso la tendenza non viene sommata: l'''andamento dei mesi già chiusi
+la contiene già. Quando la variazione recente si discosta dalle precedenti, l'''app
+segnala il cambio di passo.
 
 **Scansione IA** — fotografa uno scontrino e l'app ne estrae importo, data e
 categoria (richiede una chiave API Groq gratuita, salvata solo sul dispositivo).
