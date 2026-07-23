@@ -48,6 +48,19 @@ document.addEventListener("click",ev=>{
   else if(act==="cal-filter"){S.calFilter=t.dataset.id;render();}
   else if(act==="range"){S.chartRange=Number(t.dataset.n);render();}
   else if(act==="fc-mode"){S.fcMode=t.dataset.id;render();}
+  else if(act==="cal-sync"){calSync(false);}
+  else if(act==="rate-new"){openRate(null);}
+  else if(act==="rate-edit"){openRate(t.dataset.id);}
+  else if(act==="rate-from"){openRate(null,t.dataset.id);}
+  else if(act==="rate-del"){deleteWithUndo(()=>S.rates,a=>S.rates=a,t.dataset.id,"Tariffa");}
+  else if(act==="dayhours-save"){
+    const v=euroNum(document.getElementById("dayhours").value);
+    if(v>0&&v<=24){S.calDayHours=v;S.notice="Giornata intera: "+v+" ore.";persist();render();}
+  }
+  else if(act==="fc-ceiling"){
+    document.getElementById("ceil-val").value=S.fcCeiling!=null?S.fcCeiling:"";
+    document.getElementById("ceil-overlay").classList.add("open");
+  }
   else if(act==="filter"){S.filterCat=t.dataset.id;render();}
   else if(act==="search-clear"){S.search="";render();}
   else if(act==="edit"){const e=S.expenses.find(x=>x.id===t.dataset.id);if(e){S.editId=e.id;openForm({...e,amount:e.amount!=null?String(e.amount):"",freq:e.freq||"mensile"});}}
@@ -201,6 +214,17 @@ document.getElementById("tax-overlay").addEventListener("click",ev=>{if(ev.targe
 document.getElementById("txmove-cancel").addEventListener("click",closeTaxMove);
 document.getElementById("txmove-save").addEventListener("click",saveTaxMove);
 document.getElementById("txmove-overlay").addEventListener("click",ev=>{if(ev.target.id==="txmove-overlay")closeTaxMove();});
+document.getElementById("rate-cancel").addEventListener("click",closeRate);
+document.getElementById("rate-save").addEventListener("click",saveRate);
+document.getElementById("rate-overlay").addEventListener("click",ev=>{if(ev.target.id==="rate-overlay")closeRate();});
+document.getElementById("ceil-cancel").addEventListener("click",()=>document.getElementById("ceil-overlay").classList.remove("open"));
+document.getElementById("ceil-save").addEventListener("click",()=>{
+  const v=document.getElementById("ceil-val").value.trim();
+  S.fcCeiling=v===""?null:(euroNum(v)||null);
+  document.getElementById("ceil-overlay").classList.remove("open");
+  persist();render();
+});
+document.getElementById("ceil-overlay").addEventListener("click",ev=>{if(ev.target.id==="ceil-overlay")document.getElementById("ceil-overlay").classList.remove("open");});
 document.getElementById("confirm-no").addEventListener("click",closeConfirm);
 document.getElementById("confirm-yes").addEventListener("click",()=>{if(confirmCb)confirmCb();});
 document.getElementById("confirm-overlay").addEventListener("click",ev=>{if(ev.target.id==="confirm-overlay")closeConfirm();});

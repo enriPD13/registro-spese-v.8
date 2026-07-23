@@ -1,7 +1,7 @@
 /* ================= RENDER ================= */
 const TAB_TITLES={
   riepilogo:"Riepilogo",calendario:"Calendario",spese:"Spese",scadenze:"Scadenze",
-  entrate:"Entrate",risparmi:"Risparmi",previsioni:"Previsioni",categorie:"Categorie spese",
+  entrate:"Entrate",risparmi:"Risparmi",previsioni:"Previsioni",tariffe:"Tariffe e agenda",categorie:"Categorie spese",
   "cat-entrate":"Categorie entrate",impostazioni:"Impostazioni",
 };
 function render(){
@@ -11,7 +11,7 @@ function render(){
   renderTabs();
   const fn={riepilogo:renderRiepilogo,calendario:renderCalendario,spese:renderSpese,
     scadenze:renderScadenze,categorie:renderCategorie,impostazioni:renderImpostazioni,
-    entrate:renderEntrate,"cat-entrate":renderCatEntrate,risparmi:renderRisparmi,previsioni:renderPrevisioni}[S.tab];
+    entrate:renderEntrate,"cat-entrate":renderCatEntrate,risparmi:renderRisparmi,previsioni:renderPrevisioni,tariffe:renderTariffe}[S.tab];
   document.getElementById("main").innerHTML='<div class="view">'+banners()+fn()+'</div>';
   afterRender();
 }
@@ -26,7 +26,7 @@ function banners(){
 }
 function renderTabs(){
   const urgent=S.expenses.filter(e=>e.recurring&&daysTo(nextDue(e))<=7).length;
-  const inAltro=S.tab==="categorie"||S.tab==="impostazioni"||S.tab==="entrate"||S.tab==="cat-entrate"||S.tab==="risparmi"||S.tab==="previsioni";
+  const inAltro=S.tab==="categorie"||S.tab==="impostazioni"||S.tab==="entrate"||S.tab==="cat-entrate"||S.tab==="risparmi"||S.tab==="previsioni"||S.tab==="tariffe";
   const tabs=[
     ["riepilogo","Riepilogo","pie"],
     ["calendario","Calendario","cal"],

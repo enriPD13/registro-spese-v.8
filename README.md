@@ -23,6 +23,7 @@ js/
   drive.js                sincronizzazione Google Drive e lettura fatture da Excel
   charts.js               grafici del Riepilogo
   forecast.js             previsioni di cassa (profilo stagionale, proiezioni)
+  calendar.js             agenda Google, tariffe orarie, incasso gia' impegnato
   render.js               disegno di tutte le schermate
   forms.js                moduli: spese, categorie, modelli, bollette
   scan.js                 scansione scontrini con IA
@@ -81,6 +82,35 @@ limitata prudenzialmente fra -40% e +50% l'anno per non estrapolare valori estre
 Sull'anno in corso la tendenza non viene sommata: l'''andamento dei mesi già chiusi
 la contiene già. Quando la variazione recente si discosta dalle precedenti, l'''app
 segnala il cambio di passo.
+
+Il modello riconosce la **stabilizzazione**: se le variazioni recenti restano entro
+il 5%, le entrate sono considerate stabili e non viene estrapolata alcuna crescita.
+Quando invece una crescita c'e', viene **smorzata** (si dimezza a ogni anno
+proiettato) e vincolata da un **tetto di capacita'** - il massimo realisticamente
+fatturabile in un anno, stimato dal miglior anno realizzato oppure impostato a mano
+dalla scheda Previsioni. Serve a evitare l'errore della crescita composta
+all'infinito, irrealistica per chi vende il proprio tempo e ha un limite fisico di
+giornate lavorabili.
+
+**Tariffe e agenda** - a ogni cliente si associa una tariffa oraria. L'app legge gli
+impegni gia' programmati da Google Calendar e riconosce il cliente prima
+dall'etichetta del calendario (il modo piu' affidabile: e' una classificazione
+voluta dall'utente) e solo in seconda battuta dal titolo dell'evento. Poi calcola
+l'incasso impegnato come ore x tariffa (gli eventi "tutto il
+giorno" valgono un numero di ore configurabile). Nella previsione mensile quel valore
+fa da base minima: se gli impegni superano la stima statistica, e' l'agenda ad avere
+ragione. Gli eventi restano sul dispositivo e non vengono sincronizzati.
+
+Il confronto ignora accenti, maiuscole e spazi, e a parita' di corrispondenza vince
+il nome piu' lungo (cosi' "Manpower TS" prevale su "Manpower"). Per le grafie che non
+combaciano lettera per lettera si usa il campo varianti della tariffa. Se non c'e'
+ancora storico fatture ma esistono impegni con tariffa, la previsione parte comunque
+dalla sola agenda.
+
+Per attivarla: abilitare l'API Google Calendar sul progetto Cloud, ri-autorizzare
+l'accesso dall'app (viene chiesto il permesso di sola lettura del calendario) e, se
+si usa il calendario Apple, sincronizzarlo con l'account Google dalle impostazioni
+dell'iPhone.
 
 **Scansione IA** — fotografa uno scontrino e l'app ne estrae importo, data e
 categoria (richiede una chiave API Groq gratuita, salvata solo sul dispositivo).

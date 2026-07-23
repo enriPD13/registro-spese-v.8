@@ -37,6 +37,7 @@
 <div class="overlay" id="altro-overlay">
   <div class="sheet">
     <div class="grab"></div>
+    <div class="menu-row" data-act="go" data-id="tariffe"><span class="menu-ic" data-ic="clock"></span><div style="flex:1">Tariffe e agenda<div class="small">Compensi orari e impegni da Google Calendar</div></div><span data-ic="chev-r" style="color:var(--muted)"></span></div>
     <div class="menu-row" data-act="go" data-id="previsioni"><span class="menu-ic" data-ic="trend-up"></span><div style="flex:1">Previsioni<div class="small">Stima di cassa sui tuoi incassi storici</div></div><span data-ic="chev-r" style="color:var(--muted)"></span></div>
     <div class="menu-row" data-act="go" data-id="risparmi"><span class="menu-ic" data-ic="piggy"></span><div style="flex:1">Risparmi<div class="small">Accantonamento fiscale e obiettivi</div></div><span data-ic="chev-r" style="color:var(--muted)"></span></div>
     <div class="menu-row" data-act="go" data-id="entrate"><span class="menu-ic" data-ic="euro"></span><div style="flex:1">Entrate<div class="small">Guadagni, import da Excel fatture</div></div><span data-ic="chev-r" style="color:var(--muted)"></span></div>
@@ -269,6 +270,43 @@
   </div>
 </div>
 
+<!-- rate modal -->
+<div class="overlay" id="rate-overlay">
+  <div class="sheet">
+    <div class="grab"></div>
+    <h2 id="rate-title">Nuova tariffa</h2>
+    <div class="mb"><label class="label">Cliente</label>
+      <input class="input" id="r-name" placeholder="Es. Manpower">
+      <div class="small" style="margin-top:5px">Deve comparire nel titolo degli eventi in agenda.</div></div>
+    <div class="mb"><label class="label">Tariffa oraria (€)</label>
+      <input class="input" id="r-rate" type="number" inputmode="decimal" min="0" step="0.5" placeholder="45"></div>
+    <div class="mb"><label class="label">Altri modi in cui lo scrivi (facoltativo)</label>
+      <input class="input" id="r-keys" placeholder="Es. manpower italia, mp">
+      <div class="small" style="margin-top:5px">Separati da virgola: aiutano a riconoscere l'evento.</div></div>
+    <div class="frow" style="margin-top:8px">
+      <button class="btn btn-ghost" style="flex:1" id="rate-cancel">Annulla</button>
+      <button class="btn btn-primary" style="flex:2" id="rate-save">Salva tariffa</button>
+    </div>
+  </div>
+</div>
+
+<!-- ceiling modal -->
+<div class="overlay" id="ceil-overlay">
+  <div class="sheet">
+    <div class="grab"></div>
+    <h2>Tetto di capacità</h2>
+    <div class="small" style="margin-bottom:14px">Il massimo che puoi realisticamente fatturare in un anno,
+      considerando le giornate che riesci davvero a lavorare. Le proiezioni future non supereranno questa cifra.
+      Lascia vuoto per lasciar stimare l'app dal tuo anno migliore.</div>
+    <div class="mb"><label class="label">Tetto annuo (€)</label>
+      <input class="input" id="ceil-val" type="number" inputmode="decimal" min="0" step="500" placeholder="Stimato dall'app"></div>
+    <div class="frow" style="margin-top:8px">
+      <button class="btn btn-ghost" style="flex:1" id="ceil-cancel">Annulla</button>
+      <button class="btn btn-primary" style="flex:2" id="ceil-save">Salva</button>
+    </div>
+  </div>
+</div>
+
 <!-- confirm modal -->
 <div class="overlay" id="confirm-overlay">
   <div class="sheet">
@@ -307,6 +345,7 @@
 <script src="js/calc.js"></script>
 <script src="js/drive.js"></script>
 <script src="js/charts.js"></script>
+<script src="js/calendar.js"></script>
 <script src="js/forecast.js"></script>
 <script src="js/render.js"></script>
 <script src="js/forms.js"></script>

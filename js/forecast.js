@@ -67,6 +67,12 @@ function seasonalProfile(){
    Media ponderata delle variazioni consecutive (le recenti pesano di più),
    con un limite prudenziale per non estrapolare crescite estreme sugli anni futuri. */
 const TREND_CAP=0.5, TREND_FLOOR=-0.4;
+/* La crescita non si ripete uguale ogni anno: viene smorzata (si dimezza a ogni
+   anno proiettato). Chi vende il proprio tempo ha un limite fisico di giornate,
+   quindi una crescita composta all'infinito non è realistica. */
+const TREND_DAMP=0.5;
+/* Sotto questa soglia le variazioni sono rumore: le entrate si considerano stabili. */
+const PLATEAU_BAND=0.05;
 function detectTrend(){
   const years=completeInvoiceYears();
   const totals=years.map(y=>({y,tot:invoiceMonthlyTotals(y).reduce((a,b)=>a+b,0)})).filter(t=>t.tot>0);
@@ -90,6 +96,13 @@ function detectTrend(){
   out.growth=g;
   out.method=pairs.length===1?"variazione fra i due anni completi"
     :"media ponderata delle variazioni annuali, con più peso alle recenti";
+  /* stabilizzazione: variazione ponderata dentro la banda di rumore */
+  if(Math.abs(g)<PLATEAU_BAND){
+    out.plateau=true;
+    out.growthPrePlateau=g;
+    out.growth=0;
+    out.method="entrate stabilizzate: le variazioni recenti sono minime, nessuna tendenza estrapolata";
+  }
   /* cambio di passo: la variazione più recente rispetto alle precedenti */
   if(pairs.length>=2){
     out.recent=pairs[pairs.length-1].g;
@@ -97,6 +110,27 @@ function detectTrend(){
     if(Math.abs(out.recent-out.older)>=0.10)out.shift=out.recent-out.older;
   }
   return out;
+}
+
+/* --- tetto di capacità ---
+   Il massimo realisticamente raggiungibile in un anno. Di norma si ricava dal
+   miglior anno mai realizzato (compresa la proiezione dell'anno in corso), con un
+   piccolo margine per adeguamenti di tariffa. Può essere impostato a mano. */
+const CEILING_MARGIN=0.05;
+function capacityCeiling(){
+  if(S.fcCeiling!=null&&Number(S.fcCeiling)>0)
+    return {value:Number(S.fcCeiling),source:"impostato da te",manual:true};
+  let best=0,bestYear=null;
+  completeInvoiceYears().forEach(y=>{
+    const t=invoiceMonthlyTotals(y).reduce((a,b)=>a+b,0);
+    if(t>best){best=t;bestYear=y;}
+  });
+  const cur=new Date().getFullYear();
+  const p=projectInvoiceYear(cur);
+  if(p&&p.confidence!=="nulla"&&p.total>best){best=p.total;bestYear=cur;}
+  if(best<=0)return {value:0,source:"dati insufficienti",manual:false};
+  return {value:best*(1+CEILING_MARGIN),source:"stimato dal tuo anno migliore ("+bestYear+") più un margine del "+
+    Math.round(CEILING_MARGIN*100)+"%",manual:false,bestYear,best};
 }
 
 /* --- livello di base: ogni anno riportato al livello dell'ultimo anno completo
@@ -218,14 +252,19 @@ function forecastMonths(){
   const rows=[];
   for(let m=0;m<12;m++){
     const past=isCur&&m<firstFuture;
-    const invoice=past?monthly[m]:proj.total*proj.profile.shares[m];
+    const stat=past?monthly[m]:proj.total*proj.profile.shares[m];
+    /* impegni già in agenda: sono lavoro confermato, non una stima */
+    const comm=(typeof committedForMonth==="function")?committedForMonth(y,m):{total:0,hours:0,items:[]};
+    /* la statistica dice quanto ci si aspetta in media; l'agenda dice quanto è
+       già fissato. Se l'agenda supera la media, è lei ad avere ragione. */
+    const invoice=past?monthly[m]:Math.max(stat,comm.total);
     const recIn=recurringIncomeFor(y,m);
     const other=past?0:otherAvg;
     const income=past?(monthIncomes(y,m).reduce((s,i)=>s+(Number(i.amount)||0),0)):(invoice+recIn+other);
     const expRec=recurringExpenseFor(y,m);
     const expOne=past?0:oneOffAvg;
     const expense=past?(monthExpenses(y,m).reduce((s,e)=>s+(amountFor(e,y,m).val||0),0)):(expRec+expOne);
-    rows.push({y,m,past,invoice,recIn,other,income,expense,net:income-expense});
+    rows.push({y,m,past,invoice,stat,comm,recIn,other,income,expense,net:income-expense});
   }
   let cum=0;
   rows.forEach(r=>{cum+=r.net;r.cum=cum;});
@@ -246,13 +285,21 @@ function forecastYears(howMany){
   const g=t.growth==null?0:t.growth;
   const now=new Date().getFullYear();
   const n=howMany||3;
+  const ceil=capacityCeiling();
+  out.ceiling=ceil;
+  out.plateau=!!t.plateau;
+  out.damped=(g!==0);
+  let level=tb.base;
   for(let k=1;k<=n;k++){
     const yy=lastYear+k;
+    /* crescita smorzata: al primo anno vale g, poi si dimezza a ogni passo */
+    const gk=g*Math.pow(TREND_DAMP,k-1);
+    level=level*(1+gk);
+    let capped=false;
+    if(ceil.value>0&&level>ceil.value){level=ceil.value;capped=true;}
     if(yy<now)continue;                    /* non mostrare anni già passati */
-    const tot=tb.base*Math.pow(1+g,k);
-    /* entrate ricorrenti note per quell'anno, calcolate esattamente */
     let rec=0;for(let m=0;m<12;m++)rec+=recurringIncomeFor(yy,m);
-    out.rows.push({y:yy,invoice:tot,rec,total:tot+rec});
+    out.rows.push({y:yy,invoice:level,rec,total:level+rec,gk,capped});
   }
   return out;
 }
@@ -291,11 +338,16 @@ function fcMonthsView(){
   const yearEnd=rows.reduce((s,r)=>s+r.income,0);
   const taxRate=S.taxRate||0;
 
-  if(proj.confidence==="nulla"){
+  /* Senza storico fatture la previsione può comunque partire dagli impegni
+     già in agenda: sono lavoro certo, non una stima. */
+  const hasAgenda=(typeof calHasData==="function")&&calHasData()&&
+    rows.some(r=>!r.past&&r.comm&&r.comm.total>0);
+  if(proj.confidence==="nulla"&&!hasAgenda){
     return '<div class="card"><div class="empty">'+icon("trend-up",34)+
-      'Servono almeno alcuni mesi di fatture per costruire una previsione.<br>'+
-      'Importa lo storico da Drive e torna qui.</div></div>';
+      'Servono alcuni mesi di fatture, oppure impegni in agenda con una tariffa,<br>'+
+      'per costruire una previsione.</div></div>';
   }
+  const soloAgenda=(proj.confidence==="nulla"&&hasAgenda);
 
   const bars=future.map(r=>{
     const max=Math.max(...future.map(x=>Math.max(x.income,x.expense)),1);
@@ -318,6 +370,12 @@ function fcMonthsView(){
           '<div style="height:100%;width:'+we+'%;background:#D9836B;border-radius:99px"></div></div>'+
         '<span class="small" style="width:64px;text-align:right;font-variant-numeric:tabular-nums">'+eurShort(r.expense)+'</span>'+
       '</div>'+
+      (r.comm&&r.comm.total>0?'<div class="small" style="margin-top:6px;display:flex;align-items:center;gap:6px">'+
+        '<span style="color:var(--accent-text);display:flex">'+icon("cal",14)+'</span>'+
+        'già in agenda <b>'+eur(r.comm.total)+'</b> ('+
+        (r.comm.hours%1===0?r.comm.hours:r.comm.hours.toFixed(1))+' ore)'+
+        (r.comm.total>=r.stat?' — supera la media, previsione alzata':'')+
+      '</div>':"")+
     '</div>';
   }).join("");
 
@@ -336,15 +394,24 @@ function fcMonthsView(){
       <span class="label" style="margin:0">Come è calcolata</span>${fcConfidenceBadge(proj.confidence)}
     </div>
     <div class="small">
+      ${soloAgenda?"Previsione basata <b>solo sugli impegni in agenda</b>: non c'è ancora storico fatture sufficiente per una stima statistica.<br>":""}
       Metodo: ${esc(proj.method)}.<br>
       Profilo stagionale ricavato da <b>${proj.profile.years||0}</b> ${proj.profile.years===1?"anno completo":"anni completi"} di fatture.
       ${proj.profile.years>=2?"<br>Gli anni recenti pesano di più: "+fcWeightsTxt(proj.profile.weights)+".":""}
       ${proj.profile.years===0?"<br>Senza anni completi la distribuzione è uniforme: importa lo storico per una stima realistica.":""}
-      ${(()=>{const t=detectTrend();return t.growth!=null
-        ? "<br>Tendenza rilevata: <b>"+fcPct(t.growth)+" l'anno</b>"+(t.clamped?" (limitata per prudenza)":"")+"."
-        : "";})()}
+      ${(()=>{const t=detectTrend();
+        if(t.plateau)return "<br>Entrate <b>stabilizzate</b>: nessuna crescita estrapolata.";
+        return t.growth!=null
+          ? "<br>Tendenza rilevata: <b>"+fcPct(t.growth)+" l'anno</b>"+(t.clamped?" (limitata per prudenza)":"")+"."
+          : "";})()}
       ${f.otherAvg>0?"<br>Incluse altre entrate occasionali per "+eur(f.otherAvg)+"/mese (media)."  :""}
       ${f.oneOffAvg>0?"<br>Incluse spese una tantum per "+eur(f.oneOffAvg)+"/mese (media)."  :""}
+      ${(()=>{
+        if(typeof calHasData!=="function"||!calHasData())return "";
+        const y0=S.fcYear||new Date().getFullYear();
+        let tot=0;for(let k=f.firstFuture;k<12;k++)tot+=committedForMonth(y0,k).total;
+        return tot>0?"<br>Impegni già in agenda nei mesi a venire: <b>"+eur(tot)+"</b>, usati come base minima.":"";
+      })()}
       <br><span style="opacity:.75">Sull'anno in corso la tendenza non viene sommata: l'andamento reale dei mesi già chiusi la contiene già.</span>
     </div>
   </div>
@@ -398,8 +465,24 @@ function fcYearsView(){
       f.pairs.map(p=>p.from+"→"+p.to+" "+fcPct(p.g)).join(" · ")+'</div>':""}
     <div class="small" style="padding-top:8px">
       Tendenza applicata: <b>${growthTxt}</b> — ${esc(f.method)}.
+      ${f.plateau?'<br><b>Entrate stabilizzate:</b> le variazioni recenti rientrano nel margine di oscillazione normale, quindi non viene estrapolata alcuna crescita.':""}
+      ${(!f.plateau&&f.growth)?'<br>La crescita viene <b>smorzata</b>: si dimezza a ogni anno proiettato, perché una crescita composta all\'infinito non è realistica per chi vende il proprio tempo.':""}
       ${f.clamped?'<br><span style="color:#C46A4E">La variazione grezza ('+fcPct(f.raw)+') è stata limitata: estrapolare crescite estreme su più anni è poco affidabile.</span>':""}
       ${f.shift!=null?'<br><b>Cambio di passo:</b> l\'ultima variazione ('+fcPct(f.recent)+') si discosta dalle precedenti (media '+fcPct(f.older)+'). La ponderazione dà già più peso a quella recente.':""}
+    </div>
+  </div>
+
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+      <span class="label" style="margin:0">Tetto di capacità</span>
+      <button class="btn btn-ghost" style="padding:7px 13px;font-size:12.5px" data-act="fc-ceiling">Modifica</button>
+    </div>
+    <div style="font-weight:800;font-size:22px;font-variant-numeric:tabular-nums;margin-bottom:6px">
+      ${f.ceiling&&f.ceiling.value>0?eur(f.ceiling.value):"—"}</div>
+    <div class="small">
+      Il massimo che puoi realisticamente fatturare in un anno: le proiezioni non lo superano.
+      ${f.ceiling&&f.ceiling.value>0?"<br>"+esc(f.ceiling.source)+".":""}
+      ${f.ceiling&&f.ceiling.manual?"":"<br>Se sai che il tuo limite è diverso, impostalo a mano: la previsione ne terrà conto."}
     </div>
   </div>
 
@@ -426,7 +509,8 @@ function fcYearsView(){
           '<span style="font-weight:800;font-size:18px;font-variant-numeric:tabular-nums">'+eur(r.total)+'</span>'+
         '</div>'+
         '<div class="small" style="margin-top:3px">fatture stimate '+eur(r.invoice)+
-          (r.rec>0?' · ricorrenti certe '+eur(r.rec):'')+'</div>'+
+          (r.rec>0?' · ricorrenti certe '+eur(r.rec):'')+
+          (r.capped?' · <b>al tetto di capacità</b>':(r.gk?' · '+fcPct(r.gk)+' sull\'anno prima':''))+'</div>'+
         cmp+
       '</div>';
     }).join("")}

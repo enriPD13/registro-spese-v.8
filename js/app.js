@@ -17,6 +17,11 @@
     if(Array.isArray(data.goals))S.goals=data.goals;
     if(typeof data.taxRate==="number")S.taxRate=data.taxRate;
     if(Array.isArray(data.taxSaved))S.taxSaved=data.taxSaved;
+    if(data.fcCeiling!=null)S.fcCeiling=Number(data.fcCeiling)||null;
+    if(Array.isArray(data.rates))S.rates=data.rates;
+    if(Array.isArray(data.calEvents))S.calEvents=data.calEvents;
+    if(data.calLastSync)S.calLastSync=data.calLastSync;
+    if(data.calDayHours)S.calDayHours=Number(data.calDayHours)||8;
   }
   if(!S.templates.length)S.templates=DEFAULT_TEMPLATES.map(t=>({...t}));
   render();

@@ -1,6 +1,6 @@
 /* ================= BACKUP ================= */
 function exportBackup(){
-  const blob=new Blob([JSON.stringify({expenses:S.expenses,categories:S.categories,templates:S.templates,incomes:S.incomes,incCategories:S.incCategories,goals:S.goals,taxRate:S.taxRate,taxSaved:S.taxSaved},null,2)],{type:"application/json"});
+  const blob=new Blob([JSON.stringify({expenses:S.expenses,categories:S.categories,templates:S.templates,incomes:S.incomes,incCategories:S.incCategories,goals:S.goals,taxRate:S.taxRate,taxSaved:S.taxSaved,fcCeiling:S.fcCeiling,rates:S.rates,calDayHours:S.calDayHours},null,2)],{type:"application/json"});
   const a=document.createElement("a");
   a.href=URL.createObjectURL(blob);
   a.download="registro-spese-backup-"+todayISO()+".json";
@@ -19,6 +19,9 @@ function importBackup(file){
       if(Array.isArray(d.goals))S.goals=d.goals;
       if(typeof d.taxRate==="number")S.taxRate=d.taxRate;
       if(Array.isArray(d.taxSaved))S.taxSaved=d.taxSaved;
+      if(d.fcCeiling!=null)S.fcCeiling=Number(d.fcCeiling)||null;
+      if(Array.isArray(d.rates))S.rates=d.rates;
+      if(d.calDayHours)S.calDayHours=Number(d.calDayHours)||8;
       S.notice="Backup importato: "+S.expenses.length+" spese, "+S.incomes.length+" entrate.";
       persist();render();
     }catch(e){S.error="File di backup non valido.";render();}

@@ -7,7 +7,7 @@ function gEnsureClient(){
   if(!gTC){
     gTC=google.accounts.oauth2.initTokenClient({
       client_id:S.gClientId,
-      scope:"https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive.readonly",
+      scope:"https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/calendar.readonly",
       callback:(resp)=>{
         if(resp&&resp.access_token){
           gTokenObj={token:resp.access_token,exp:Date.now()+((resp.expires_in||3600)-60)*1000};
@@ -46,7 +46,7 @@ async function driveFind(){
 }
 function drivePayload(){
   return JSON.stringify({expenses:S.expenses,categories:S.categories,apiKey:S.apiKey,
-    templates:S.templates,incomes:S.incomes,incCategories:S.incCategories,goals:S.goals,taxRate:S.taxRate,taxSaved:S.taxSaved,savedAt:S.savedAt||0});
+    templates:S.templates,incomes:S.incomes,incCategories:S.incCategories,goals:S.goals,taxRate:S.taxRate,taxSaved:S.taxSaved,fcCeiling:S.fcCeiling,rates:S.rates,calDayHours:S.calDayHours,savedAt:S.savedAt||0});
 }
 async function drivePush(fileId){
   const body=drivePayload();
@@ -79,6 +79,9 @@ async function syncNow(){
         if(Array.isArray(remote.goals))S.goals=remote.goals;
         if(typeof remote.taxRate==="number")S.taxRate=remote.taxRate;
         if(Array.isArray(remote.taxSaved))S.taxSaved=remote.taxSaved;
+        if(remote.fcCeiling!=null)S.fcCeiling=Number(remote.fcCeiling)||null;
+        if(Array.isArray(remote.rates))S.rates=remote.rates;
+        if(remote.calDayHours)S.calDayHours=Number(remote.calDayHours)||8;
         S.savedAt=rAt;
         S.notice="Dati aggiornati da Google Drive (versione più recente).";
       }else{
