@@ -22,6 +22,9 @@
     if(Array.isArray(data.calEvents))S.calEvents=data.calEvents;
     if(data.calLastSync)S.calLastSync=data.calLastSync;
     if(data.calDayHours)S.calDayHours=Number(data.calDayHours)||8;
+    if(data.calBreakStart)S.calBreakStart=data.calBreakStart;
+    if(data.calBreakEnd)S.calBreakEnd=data.calBreakEnd;
+    if(data.calMaxHours!=null)S.calMaxHours=Number(data.calMaxHours)||0;
   }
   if(!S.templates.length)S.templates=DEFAULT_TEMPLATES.map(t=>({...t}));
   render();

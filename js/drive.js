@@ -46,7 +46,7 @@ async function driveFind(){
 }
 function drivePayload(){
   return JSON.stringify({expenses:S.expenses,categories:S.categories,apiKey:S.apiKey,
-    templates:S.templates,incomes:S.incomes,incCategories:S.incCategories,goals:S.goals,taxRate:S.taxRate,taxSaved:S.taxSaved,fcCeiling:S.fcCeiling,rates:S.rates,calDayHours:S.calDayHours,savedAt:S.savedAt||0});
+    templates:S.templates,incomes:S.incomes,incCategories:S.incCategories,goals:S.goals,taxRate:S.taxRate,taxSaved:S.taxSaved,fcCeiling:S.fcCeiling,rates:S.rates,calDayHours:S.calDayHours,calBreakStart:S.calBreakStart,calBreakEnd:S.calBreakEnd,calMaxHours:S.calMaxHours,savedAt:S.savedAt||0});
 }
 async function drivePush(fileId){
   const body=drivePayload();
@@ -82,6 +82,9 @@ async function syncNow(){
         if(remote.fcCeiling!=null)S.fcCeiling=Number(remote.fcCeiling)||null;
         if(Array.isArray(remote.rates))S.rates=remote.rates;
         if(remote.calDayHours)S.calDayHours=Number(remote.calDayHours)||8;
+        if(remote.calBreakStart)S.calBreakStart=remote.calBreakStart;
+        if(remote.calBreakEnd)S.calBreakEnd=remote.calBreakEnd;
+        if(remote.calMaxHours!=null)S.calMaxHours=Number(remote.calMaxHours)||0;
         S.savedAt=rAt;
         S.notice="Dati aggiornati da Google Drive (versione più recente).";
       }else{

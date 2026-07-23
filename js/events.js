@@ -1,6 +1,6 @@
 /* ================= EVENTS ================= */
 document.addEventListener("click",ev=>{
-  const t=ev.target.closest("[data-act],[data-fcat],[data-ffreq],[data-ifreq],[data-icat],[data-tcat],[data-tfreq],[data-ccolor],[data-gcolor]");
+  const t=ev.target.closest("[data-act],[data-fcat],[data-ffreq],[data-ifreq],[data-icat],[data-tcat],[data-tfreq],[data-ccolor],[data-gcolor],[data-rcolor]");
   if(!t)return;
   if(t.dataset.fcat!==undefined){
     document.querySelectorAll("#f-cats .chip").forEach(x=>x.classList.remove("active"));
@@ -29,6 +29,10 @@ document.addEventListener("click",ev=>{
   if(t.dataset.ccolor!==undefined){
     catColorSel=t.dataset.ccolor;renderCatColors();return;
   }
+  if(t.dataset.rcolor!==undefined){
+    rateColorSel=t.dataset.rcolor;
+    document.getElementById("r-colors").innerHTML=rateColorsHtml();return;
+  }
   if(t.dataset.gcolor!==undefined){
     goalColorSel=t.dataset.gcolor;document.getElementById("g-colors").innerHTML=goalColorsHtml();return;
   }
@@ -49,13 +53,32 @@ document.addEventListener("click",ev=>{
   else if(act==="range"){S.chartRange=Number(t.dataset.n);render();}
   else if(act==="fc-mode"){S.fcMode=t.dataset.id;render();}
   else if(act==="cal-sync"){calSync(false);}
+  else if(act==="ag-month"){
+    const now=new Date();
+    let y=(S.agY==null?now.getFullYear():S.agY), m=(S.agM==null?now.getMonth():S.agM);
+    const d=new Date(y,m+Number(t.dataset.d),1);
+    S.agY=d.getFullYear();S.agM=d.getMonth();S.agSelDay=null;render();
+  }
+  else if(act==="ag-day"){
+    const n=Number(t.dataset.d);
+    S.agSelDay=(S.agSelDay===n?null:n);render();
+  }
+  else if(act==="ag-all"){S.agSelDay=null;render();}
   else if(act==="rate-new"){openRate(null);}
   else if(act==="rate-edit"){openRate(t.dataset.id);}
   else if(act==="rate-from"){openRate(null,t.dataset.id);}
   else if(act==="rate-del"){deleteWithUndo(()=>S.rates,a=>S.rates=a,t.dataset.id,"Tariffa");}
-  else if(act==="dayhours-save"){
-    const v=euroNum(document.getElementById("dayhours").value);
-    if(v>0&&v<=24){S.calDayHours=v;S.notice="Giornata intera: "+v+" ore.";persist();render();}
+  else if(act==="hours-save"){
+    const dh=euroNum(document.getElementById("dayhours").value);
+    const mh=euroNum(document.getElementById("maxhours").value);
+    const bs=document.getElementById("brk-start").value;
+    const be=document.getElementById("brk-end").value;
+    if(dh>0&&dh<=24)S.calDayHours=dh;
+    S.calMaxHours=(isNaN(mh)||mh<=0)?0:Math.min(24,mh);
+    if(bs)S.calBreakStart=bs;
+    if(be)S.calBreakEnd=be;
+    S.notice="Impostazioni ore aggiornate.";
+    persist();render();
   }
   else if(act==="fc-ceiling"){
     document.getElementById("ceil-val").value=S.fcCeiling!=null?S.fcCeiling:"";

@@ -107,6 +107,17 @@ combaciano lettera per lettera si usa il campo varianti della tariffa. Se non c'
 ancora storico fatture ma esistono impegni con tariffa, la previsione parte comunque
 dalla sola agenda.
 
+Nelle attivita' lunghe (oltre 6 ore lorde) la pausa viene tolta automaticamente dal
+conteggio: un impegno 9-18 vale 8 ore pagate, non 9. La fascia di pausa (13:00-14:00
+per impostazione predefinita), il tetto massimo di ore per singola attivita' (8) e le
+ore di una giornata intera sono configurabili nella scheda. Le attivita' brevi non
+vengono toccate, anche se attraversano la fascia di pausa.
+
+La scheda mostra anche un calendario mensile delle attivita' gia' programmate: ogni
+giorno riporta il compenso previsto e un puntino del colore del cliente, e toccando
+un giorno si vede il dettaglio di ogni singola attivita' (orario, ore x tariffa,
+compenso). Sotto il calendario, l'elenco completo delle attivita' del mese.
+
 Per attivarla: abilitare l'API Google Calendar sul progetto Cloud, ri-autorizzare
 l'accesso dall'app (viene chiesto il permesso di sola lettura del calendario) e, se
 si usa il calendario Apple, sincronizzarlo con l'account Google dalle impostazioni
