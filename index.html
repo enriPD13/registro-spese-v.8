@@ -270,6 +270,25 @@
   </div>
 </div>
 
+<!-- activity modal -->
+<div class="overlay" id="act-overlay">
+  <div class="sheet">
+    <div class="grab"></div>
+    <h2 id="act-title">Attività</h2>
+    <div class="small" id="act-when" style="margin-bottom:14px"></div>
+    <div class="mb"><label class="label">Ore conteggiate</label>
+      <input class="input" id="a-hours" type="number" inputmode="decimal" min="0" max="24" step="0.5">
+      <div class="small" style="margin-top:5px">Correggi solo questa attività: l'agenda su Google non viene modificata.</div></div>
+    <div class="mb"><label class="label">Cliente</label>
+      <div class="chips" id="a-rates"></div></div>
+    <button class="btn btn-ghost" id="act-reset" style="width:100%;margin-bottom:10px;display:none">Ripristina dall'agenda</button>
+    <div class="frow">
+      <button class="btn btn-ghost" style="flex:1" id="act-cancel">Annulla</button>
+      <button class="btn btn-primary" style="flex:2" id="act-save">Salva</button>
+    </div>
+  </div>
+</div>
+
 <!-- rate modal -->
 <div class="overlay" id="rate-overlay">
   <div class="sheet">

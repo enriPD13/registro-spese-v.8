@@ -41,25 +41,16 @@ function eventSkipped(ev){
   return words.some(x=>t.includes(x));
 }
 
-/* Riconoscimento di un evento.
-   Modalità "etichetta" (predefinita): conta solo il calendario di appartenenza,
-   perché è una classificazione voluta da te. Un evento nel calendario personale
-   non diventa lavoro solo perché cita un cliente nel titolo.
-   Modalità "etichetta-titolo": se l'etichetta non basta, si guarda anche il titolo. */
+/* Riconoscimento di un evento: conta SOLO il calendario in cui è salvato, perché è
+   una classificazione voluta dall'utente. Un evento nel calendario personale non
+   diventa lavoro solo perché cita un cliente nel titolo. */
 function rateForEvent(ev){
   if(!ev)return null;
   if(eventSkipped(ev))return null;
-  const byLabel=rateForTitle(ev.cal);
-  if(byLabel)return byLabel;
-  if((S.calMatchMode||"etichetta")==="etichetta")return null;
-  return rateForTitle(ev.title);
+  return rateForTitle(ev.cal);   // conta solo il calendario di appartenenza
 }
 function matchSource(ev){
-  if(!ev)return null;
-  if(eventSkipped(ev))return null;
-  if(rateForTitle(ev.cal))return "etichetta";
-  if((S.calMatchMode||"etichetta")!=="etichetta"&&rateForTitle(ev.title))return "titolo";
-  return null;
+  return rateForEvent(ev)?"etichetta":null;
 }
 
 /* etichette (calendari) presenti negli impegni letti */
@@ -219,33 +210,68 @@ async function calSync(silent){
 
 /* --- incasso già impegnato in un dato mese --- */
 function committedForMonth(y,m){
-  const res={total:0,hours:0,items:[],unmatched:0};
+  const res={total:0,hours:0,items:[],unmatched:0,hidden:0};
   (S.calEvents||[]).forEach(ev=>{
     const d=new Date(ev.start);
     if(isNaN(d)||d.getFullYear()!==y||d.getMonth()!==m)return;
-    const r=rateForEvent(ev);
-    const h=calEventHours(ev);
-    if(!r){ if(h>0)res.unmatched++; return; }
-    const amount=h*(Number(r.rate)||0);
-    res.total+=amount;res.hours+=h;
-    res.items.push({title:ev.title,date:ev.start,hours:h,rate:Number(r.rate)||0,
-      amount,client:r.name,via:matchSource(ev)});
+    const ov=evOverride(ev.id);
+    if(ov&&ov.hidden){res.hidden++;return;}
+    const a=activityFor(ev);
+    if(!a){ if(calEventHours(ev)>0)res.unmatched++; return; }
+    res.total+=a.amount;res.hours+=a.hours;
+    res.items.push({id:ev.id,title:ev.title,date:ev.start,hours:a.hours,
+      rate:Number(a.rate.rate)||0,amount:a.amount,client:a.rate.name,corretta:a.corretta});
   });
   res.items.sort((a,b)=>a.date<b.date?-1:1);
   return res;
 }
+/* Correzioni locali: l'agenda è in sola lettura, quindi modifiche ed esclusioni
+   restano nell'app e sopravvivono ai successivi aggiornamenti. */
+function evOverride(id){return (S.calOverrides||{})[id]||null;}
+function setOverride(id,patch){
+  if(!S.calOverrides||typeof S.calOverrides!=="object")S.calOverrides={};
+  S.calOverrides={...S.calOverrides,[id]:{...(S.calOverrides[id]||{}),...patch}};
+}
+function clearOverride(id){
+  if(!S.calOverrides)return;
+  const o={...S.calOverrides};delete o[id];S.calOverrides=o;
+}
+
+/* Attività retribuita corrispondente a un impegno, tenendo conto delle correzioni.
+   Restituisce null se l'impegno non è lavoro o è stato escluso a mano. */
+function activityFor(ev){
+  const ov=evOverride(ev.id);
+  if(ov&&ov.hidden)return null;
+  let rate=rateForEvent(ev);
+  if(ov&&ov.rateId){
+    const r=(S.rates||[]).find(x=>x.id===ov.rateId);
+    if(r)rate=r;
+  }
+  if(!rate)return null;
+  const det=calHoursDetail(ev);
+  const hours=(ov&&ov.hours!=null&&ov.hours!=="")?Number(ov.hours):det.hours;
+  return {ev,rate,hours,amount:hours*(Number(rate.rate)||0),det,
+    corretta:!!(ov&&(ov.hours!=null||ov.rateId))};
+}
+
 /* attività retribuite di un singolo giorno */
 function agendaForDay(y,m,day){
   const out=[];
   (S.calEvents||[]).forEach(ev=>{
     const d=new Date(ev.start);
     if(isNaN(d)||d.getFullYear()!==y||d.getMonth()!==m||d.getDate()!==day)return;
-    const r=rateForEvent(ev);
-    if(!r)return;
-    const h=calEventHours(ev);
-    out.push({ev,rate:r,hours:h,amount:h*(Number(r.rate)||0)});
+    const a=activityFor(ev);
+    if(a)out.push(a);
   });
   return out.sort((a,b)=>a.ev.start<b.ev.start?-1:1);
+}
+/* impegni esclusi a mano nel mese */
+function agendaHidden(y,m){
+  return (S.calEvents||[]).filter(ev=>{
+    const d=new Date(ev.start);
+    const ov=evOverride(ev.id);
+    return !isNaN(d)&&d.getFullYear()===y&&d.getMonth()===m&&ov&&ov.hidden;
+  });
 }
 /* impegni del mese senza tariffa riconosciuta (solo per informazione) */
 function agendaUnmatched(y,m){
@@ -271,78 +297,35 @@ function missingRateClients(){
   return names.filter(c=>!rateForTitle(c));
 }
 
-/* ================= VISTA TARIFFE ================= */
+/* ================= VISTA TARIFFE E AGENDA ================= */
 function renderTariffe(){
+  const now=new Date();
+  const y=(S.agY==null?now.getFullYear():S.agY);
+  const m=(S.agM==null?now.getMonth():S.agM);
+  const mese=committedForMonth(y,m);
   const rates=S.rates||[];
-  const missing=missingRateClients();
   const lastTxt=S.calLastSync?new Date(S.calLastSync).toLocaleString("it-IT"):"mai";
   const evs=(S.calEvents||[]).length;
   const matched=(S.calEvents||[]).filter(e=>rateForEvent(e)).length;
 
+  /* guadagno per cliente nel mese mostrato */
+  const perCliente={};
+  mese.items.forEach(x=>{perCliente[x.client]=(perCliente[x.client]||0)+x.amount;});
+  const voci=Object.entries(perCliente).map(([k,v])=>({k,v})).sort((a,b)=>b.v-a.v);
+
+  const donut=voci.length?`
+  <div class="card">
+    <span class="label">Guadagno dalle attività programmate</span>
+    <div class="donut-wrap"><canvas id="chart-agenda" width="190" height="190"></canvas>
+      <div class="donut-center"><div class="n">${eurShort(mese.total)}</div><div class="l">${MESI[m]}</div></div></div>
+    <div class="legend" id="agenda-legend"></div>
+  </div>`:`
+  <div class="card"><div class="empty">${icon("cal",34)}
+    Nessuna attività retribuita in ${MESI_FULL[m]}.<br>
+    ${evs?"Assegna una tariffa alle etichette dei clienti.":"Aggiorna l'agenda per iniziare."}</div></div>`;
+
   return `
-  <div class="card">
-    <span class="label">Agenda Google</span>
-    <div class="small" style="margin-bottom:12px">
-      Gli impegni già programmati diventano incasso previsto: ore dell'evento × tariffa del cliente.
-      Il cliente è riconosciuto prima dall'<b>etichetta del calendario</b>, poi dal titolo dell'evento.
-      <br>Ultima lettura: <b>${esc(lastTxt)}</b>${evs?" · "+evs+" impegni, "+matched+" con tariffa":""}
-    </div>
-    <button class="btn btn-primary" data-act="cal-sync" style="width:100%">Aggiorna agenda</button>
-    <div class="small" style="margin-top:10px">
-      Gli impegni restano sul dispositivo. Serve aver attivato l'API Calendar su Google Cloud
-      e aver sincronizzato il calendario Apple con Google.
-    </div>
-  </div>
-
-  <div class="card">
-    <span class="label">Come riconoscere le attività</span>
-    <div class="chips" style="margin-bottom:10px">
-      ${["etichetta","etichetta-titolo"].map(m=>'<button class="chip '+
-        ((S.calMatchMode||"etichetta")===m?"active":"")+'" data-act="match-mode" data-id="'+m+'">'+
-        (m==="etichetta"?"Solo etichetta":"Etichetta e titolo")+'</button>').join("")}
-    </div>
-    <div class="small" style="margin-bottom:14px">
-      ${(S.calMatchMode||"etichetta")==="etichetta"
-        ? "Conta <b>solo il calendario</b> in cui è salvato l'impegno. Un evento nel calendario personale non viene conteggiato nemmeno se cita un cliente nel titolo — è la scelta consigliata."
-        : "Se l'etichetta non corrisponde a nessun cliente, si guarda anche il titolo dell'evento. Più permissivo, ma può conteggiare per errore eventi personali che citano un cliente."}
-    </div>
-    <label class="label">Parole che escludono un impegno</label>
-    <div class="frow">
-      <input class="input" id="skipwords" placeholder="Es. compleanno, ferie, permesso"
-        value="${esc(S.calSkipWords||"")}" style="flex:2">
-      <button class="btn btn-ghost" data-act="skipwords-save" style="flex:1">Salva</button>
-    </div>
-    <div class="small" style="margin-top:8px">
-      Separate da virgola. Un impegno il cui titolo contiene una di queste parole non viene
-      mai conteggiato, nemmeno dentro un calendario di lavoro.
-    </div>
-  </div>
-
-  ${(()=>{
-    const list=S.calList||[];
-    if(!list.length)return "";
-    return '<div class="card"><span class="label">Calendari trovati su Google</span>'+
-      '<div class="small" style="margin-bottom:10px">I calendari che il tuo account Google espone. Con ✕ escludi quelli che non riguardano il lavoro (es. il calendario personale): i loro impegni non vengono conteggiati.</div>'+
-      list.map(c=>{
-        const r=rateForTitle(c.name);
-        const off=c.ignorato||calIsIgnored(c.id);
-        const stato=off?'<span style="opacity:.7">escluso dal conteggio</span>'
-          :(c.error?'<span style="color:#C46A4E">'+esc(c.error)+'</span>'
-          :(c.count+(c.count===1?" impegno":" impegni")+
-            (c.iscritto?" · iscritto (ritardo di aggiornamento)":"")+
-            (c.nascosto?" · nascosto":"")));
-        return '<div class="row"'+(off?' style="opacity:.55"':'')+'>'+
-          '<span style="width:11px;height:11px;border-radius:4px;flex-shrink:0;background:'+
-            (off?"var(--line)":(r?rateColor(r):"var(--line)"))+'"></span>'+
-          '<div class="rdesc"><div class="rtitle">'+esc(c.name)+(c.principale?' <span class="rtag tag-var">principale</span>':'')+'</div>'+
-          '<div class="rmeta">'+stato+'</div></div>'+
-          (!off&&r?'<span class="small" style="color:var(--accent-text);font-weight:800">'+eur(r.rate)+'/ora</span>':'')+
-          (!off&&!r?'<button class="btn btn-ghost" style="padding:7px 12px;font-size:12.5px" data-act="rate-from" data-id="'+esc(c.name)+'">Tariffa</button>':'')+
-          '<button class="iconbtn" aria-label="'+(off?"Includi":"Escludi")+' calendario" data-act="cal-ignore" data-id="'+esc(c.id)+'" data-n="'+esc(c.name)+'">'+
-            icon(off?"plus":"x",18)+'</button>'+
-        '</div>';
-      }).join("")+'</div>';
-  })()}
+  ${donut}
 
   ${renderAgendaCalendar()}
 
@@ -357,7 +340,8 @@ function renderTariffe(){
       return '<div class="row">'+
         '<span style="width:13px;height:13px;border-radius:4px;background:'+rateColor(r)+';flex-shrink:0"></span>'+
         '<div class="rdesc"><div class="rtitle">'+esc(r.name)+'</div>'+
-        '<div class="rmeta">'+(Number(r.rate)>0?eur(r.rate)+'/ora':'<span style="color:#C46A4E">tariffa da impostare</span>')+(n?' · '+n+(n===1?" impegno":" impegni"):"")+
+        '<div class="rmeta">'+(Number(r.rate)>0?eur(r.rate)+'/ora':'<span style="color:#C46A4E">tariffa da impostare</span>')+
+          (n?' · '+n+(n===1?" impegno":" impegni"):"")+
           (r.keywords?' · anche: '+esc(r.keywords):'')+'</div></div>'+
         '<button class="iconbtn" aria-label="Modifica tariffa" data-act="rate-edit" data-id="'+r.id+'">'+icon("pencil",18)+'</button>'+
         '<button class="iconbtn" aria-label="Elimina tariffa" data-act="rate-del" data-id="'+r.id+'">'+icon("x",18)+'</button>'+
@@ -365,28 +349,80 @@ function renderTariffe(){
     }).join(""):'<div class="empty">'+icon("euro",34)+'Nessuna tariffa impostata.<br>Aggiungine una per iniziare.</div>'}
   </div>
 
-  ${(()=>{
-    const labs=calLabels();
-    if(!labs.length)return "";
-    return '<div class="card"><span class="label">Etichette in agenda</span>'+
-      '<div class="small" style="margin-bottom:10px">I calendari letti da Google. Se un\'etichetta corrisponde a una tariffa, tutti i suoi impegni vengono riconosciuti qualunque sia il titolo.</div>'+
-      labs.map(l=>{
-        const r=rateForTitle(l);
-        const n=(S.calEvents||[]).filter(e=>e.cal===l).length;
-        return '<div class="row"><div class="rdesc"><div class="rtitle">'+esc(l)+'</div>'+
-          '<div class="rmeta">'+n+(n===1?" impegno":" impegni")+'</div></div>'+
-          (r?'<span class="small" style="color:var(--accent-text);font-weight:800">'+eur(r.rate)+'/ora</span>'
-            :'<button class="btn btn-ghost" style="padding:7px 13px;font-size:12.5px" data-act="rate-from" data-id="'+esc(l)+'">Imposta</button>')+
-        '</div>';
-      }).join("")+'</div>';
-  })()}
+  <div class="card">
+    <span class="label">Agenda Google</span>
+    <div class="small" style="margin-bottom:12px">
+      Un impegno conta come lavoro se si trova nel calendario del cliente: il riconoscimento
+      avviene dall'etichetta del calendario.
+      <br>Ultima lettura: <b>${esc(lastTxt)}</b>${evs?" · "+evs+" impegni, "+matched+" con tariffa":""}
+    </div>
+    <button class="btn btn-primary" data-act="cal-sync" style="width:100%">Aggiorna agenda</button>
+    <div class="small" style="margin-top:10px">
+      Gli impegni restano sul dispositivo. Le impostazioni di calendari, clienti e orari
+      sono nell'ingranaggio in alto.
+    </div>
+  </div>`;
+}
 
-  ${missing.length?`<div class="card">
+/* ================= IMPOSTAZIONI AGENDA (ingranaggio) ================= */
+function renderAgendaConfig(){
+  const list=S.calList||[];
+  const labs=calLabels();
+  const missing=missingRateClients();
+
+  const cardCalendari=list.length?`
+  <div class="card">
+    <span class="label">Calendari trovati su Google</span>
+    <div class="small" style="margin-bottom:10px">I calendari che il tuo account Google espone. Con ✕ escludi quelli che non riguardano il lavoro: i loro impegni non vengono conteggiati.</div>
+    ${list.map(c=>{
+      const r=rateForTitle(c.name);
+      const off=c.ignorato||calIsIgnored(c.id);
+      const stato=off?'<span style="opacity:.7">escluso dal conteggio</span>'
+        :(c.error?'<span style="color:#C46A4E">'+esc(c.error)+'</span>'
+        :(c.count+(c.count===1?" impegno":" impegni")+
+          (c.iscritto?" · iscritto (ritardo di aggiornamento)":"")+
+          (c.nascosto?" · nascosto":"")));
+      return '<div class="row"'+(off?' style="opacity:.55"':'')+'>'+
+        '<span style="width:11px;height:11px;border-radius:4px;flex-shrink:0;background:'+
+          (off?"var(--line)":(r?rateColor(r):"var(--line)"))+'"></span>'+
+        '<div class="rdesc"><div class="rtitle">'+esc(c.name)+(c.principale?' <span class="rtag tag-var">principale</span>':'')+'</div>'+
+        '<div class="rmeta">'+stato+'</div></div>'+
+        (!off&&r?'<span class="small" style="color:var(--accent-text);font-weight:800">'+eur(r.rate)+'/ora</span>':'')+
+        (!off&&!r?'<button class="btn btn-ghost" style="padding:7px 12px;font-size:12.5px" data-act="rate-from" data-id="'+esc(c.name)+'">Tariffa</button>':'')+
+        '<button class="iconbtn" aria-label="'+(off?"Includi":"Escludi")+' calendario" data-act="cal-ignore" data-id="'+esc(c.id)+'" data-n="'+esc(c.name)+'">'+
+          icon(off?"plus":"x",18)+'</button>'+
+      '</div>';
+    }).join("")}
+  </div>`:`
+  <div class="card"><div class="empty">${icon("cal",34)}Nessun calendario letto.<br>Premi "Aggiorna agenda" nella pagina precedente.</div></div>`;
+
+  const cardEtichette=labs.length?`
+  <div class="card">
+    <span class="label">Etichette in agenda</span>
+    <div class="small" style="margin-bottom:10px">Se un'etichetta corrisponde a una tariffa, tutti i suoi impegni vengono riconosciuti qualunque sia il titolo.</div>
+    ${labs.map(l=>{
+      const r=rateForTitle(l);
+      const n=(S.calEvents||[]).filter(e=>e.cal===l).length;
+      return '<div class="row"><div class="rdesc"><div class="rtitle">'+esc(l)+'</div>'+
+        '<div class="rmeta">'+n+(n===1?" impegno":" impegni")+'</div></div>'+
+        (r?'<span class="small" style="color:var(--accent-text);font-weight:800">'+eur(r.rate)+'/ora</span>'
+          :'<button class="btn btn-ghost" style="padding:7px 13px;font-size:12.5px" data-act="rate-from" data-id="'+esc(l)+'">Imposta</button>')+
+      '</div>';
+    }).join("")}
+  </div>`:"";
+
+  const cardMancanti=missing.length?`
+  <div class="card">
     <span class="label">Clienti senza tariffa</span>
     <div class="small" style="margin-bottom:10px">Compaiono nelle tue fatture o in agenda ma non hanno ancora una tariffa oraria.</div>
     ${missing.map(c=>'<div class="row"><div class="rdesc rtitle">'+esc(c)+'</div>'+
       '<button class="btn btn-ghost" style="padding:7px 13px;font-size:12.5px" data-act="rate-from" data-id="'+esc(c)+'">Imposta</button></div>').join("")}
-  </div>`:""}
+  </div>`:"";
+
+  return `
+  ${cardCalendari}
+  ${cardEtichette}
+  ${cardMancanti}
 
   <div class="card">
     <span class="label">Ore e pause</span>
@@ -410,11 +446,45 @@ function renderTariffe(){
           value="${S.calDayHours||8}"></div>
     </div>
     <button class="btn btn-ghost" data-act="hours-save" style="width:100%">Salva</button>
-    <div class="small" style="margin-top:10px">
-      "Massimo ore" limita quanto può valere una singola attività: lascia 0 per non porre limiti.
-      "Giornata intera" è quanto vale un evento senza orario.
+  </div>
+
+  <div class="card">
+    <span class="label">Parole che escludono un impegno</span>
+    <div class="small" style="margin-bottom:10px">
+      Un impegno il cui titolo contiene una di queste parole non viene conteggiato,
+      nemmeno dentro un calendario di lavoro. Separate da virgola.
+    </div>
+    <div class="frow">
+      <input class="input" id="skipwords" placeholder="Es. compleanno, ferie, permesso"
+        value="${esc(S.calSkipWords||"")}" style="flex:2">
+      <button class="btn btn-ghost" data-act="skipwords-save" style="flex:1">Salva</button>
     </div>
   </div>`;
+}
+
+/* --- ciambella del guadagno programmato --- */
+function drawAgendaDonut(){
+  const el=document.getElementById("chart-agenda");
+  if(!el||typeof Chart==="undefined")return;
+  const now=new Date();
+  const y=(S.agY==null?now.getFullYear():S.agY);
+  const m=(S.agM==null?now.getMonth():S.agM);
+  const mese=committedForMonth(y,m);
+  const per={};
+  mese.items.forEach(x=>{per[x.client]=(per[x.client]||0)+x.amount;});
+  const voci=Object.entries(per).map(([k,v])=>({k,v})).sort((a,b)=>b.v-a.v);
+  if(!voci.length)return;
+  const col=k=>{const r=(S.rates||[]).find(x=>x.name===k);return r?rateColor(r):"#8B887C";};
+  charts.push(new Chart(el,{type:"doughnut",
+    data:{labels:voci.map(v=>v.k),datasets:[{data:voci.map(v=>v.v),
+      backgroundColor:voci.map(v=>col(v.k)),borderWidth:0,spacing:2,borderRadius:5}]},
+    options:{cutout:"70%",responsive:false,plugins:{legend:{display:false},
+      tooltip:{callbacks:{label:c=>" "+eur(c.raw)}}}}}));
+  const leg=document.getElementById("agenda-legend");
+  if(leg)leg.innerHTML=voci.map(v=>'<div class="row"><span class="dot" style="background:'+col(v.k)+'"></span>'+
+    '<div class="rdesc rtitle" style="font-weight:600;font-size:14px">'+esc(v.k)+'</div>'+
+    '<span class="ramount" style="font-size:14px">'+eur(v.v)+'</span>'+
+    '<span class="pct">'+(mese.total?Math.round(v.v/mese.total*100):0)+'%</span></div>').join("");
 }
 
 /* --- editor tariffa --- */
@@ -496,6 +566,10 @@ function renderAgendaCalendar(){
       (all.length?all.map(agendaRow).join(""):'<div class="empty">Nessuna attività retribuita in questo mese.</div>')+
       (senza?'<div class="small" style="padding-top:10px">'+senza+(senza===1?" impegno senza tariffa":" impegni senza tariffa")+
         ' non conteggiati: sono eventi il cui cliente non è riconosciuto.</div>':"")+
+      (()=>{const hid=agendaHidden(y,m);
+        return hid.length?'<div class="small" style="padding-top:8px">'+hid.length+
+          (hid.length===1?" attività esclusa a mano":" attività escluse a mano")+
+          ' · <button class="btn btn-ghost" style="padding:5px 11px;font-size:12px" data-act="act-restore-all" data-y="'+y+'" data-m="'+m+'">Ripristina</button></div>':"";})()+
     '</div>';
   }
 
@@ -524,13 +598,74 @@ function agendaRow(x){
     ? d.toLocaleDateString("it-IT",{day:"numeric",month:"short"})+" · giornata"
     : d.toLocaleDateString("it-IT",{day:"numeric",month:"short"})+" · "+
       d.toLocaleTimeString("it-IT",{hour:"2-digit",minute:"2-digit"});
-  const det=calHoursDetail(x.ev);
-  const nota=det.pausa>0?' <span style="opacity:.8">(−'+fmtOre(det.pausa)+'h pausa)</span>'
-    :(det.capped?' <span style="opacity:.8">(max)</span>':'');
+  const det=x.det||calHoursDetail(x.ev);
+  const nota=x.corretta?' <span style="opacity:.8">(corretta)</span>'
+    :(det.pausa>0?' <span style="opacity:.8">(−'+fmtOre(det.pausa)+'h pausa)</span>'
+    :(det.capped?' <span style="opacity:.8">(max)</span>':''));
   return '<div class="row">'+
     '<span class="dot" style="background:'+rateColor(x.rate)+'"></span>'+
     '<div class="rdesc"><div class="rtitle">'+esc(x.ev.title||x.rate.name)+'</div>'+
     '<div class="rmeta">'+esc(quando)+' · '+fmtOre(x.hours)+'h'+nota+' × '+eur(x.rate.rate)+' · '+esc(x.rate.name)+'</div></div>'+
     '<div class="ramount" style="color:var(--accent-text)">'+eur(x.amount)+'</div>'+
+    '<button class="iconbtn" aria-label="Modifica attività" data-act="act-edit" data-id="'+esc(x.ev.id)+'">'+icon("pencil",18)+'</button>'+
+    '<button class="iconbtn" aria-label="Escludi attività" data-act="act-del" data-id="'+esc(x.ev.id)+'">'+icon("x",18)+'</button>'+
   '</div>';
+}
+
+/* --- editor di una singola attività --- */
+let actEditId=null,actRateSel=null;
+function actRatesHtml(){
+  return (S.rates||[]).map(r=>'<button class="chip '+(actRateSel===r.id?"active":"")+'" data-arate="'+r.id+'">'+
+    esc(r.name)+'</button>').join("");
+}
+function openAct(id){
+  const ev=(S.calEvents||[]).find(e=>e.id===id);
+  if(!ev)return;
+  const a=activityFor(ev);
+  const ov=evOverride(id);
+  actEditId=id;
+  actRateSel=(ov&&ov.rateId)?ov.rateId:(a?a.rate.id:((S.rates||[])[0]||{}).id);
+  const d=new Date(ev.start);
+  document.getElementById("act-title").textContent=ev.title||"Attività";
+  document.getElementById("act-when").textContent=d.toLocaleDateString("it-IT",{weekday:"long",day:"numeric",month:"long"})+
+    (ev.allDay?" · giornata intera":" · "+d.toLocaleTimeString("it-IT",{hour:"2-digit",minute:"2-digit"}))+
+    " · dal calendario "+(ev.cal||"—");
+  document.getElementById("a-hours").value=a?fmtOre(a.hours).replace(",","."):"";
+  document.getElementById("a-rates").innerHTML=actRatesHtml();
+  document.getElementById("act-reset").style.display=ov?"block":"none";
+  document.getElementById("act-overlay").classList.add("open");
+}
+function closeAct(){actEditId=null;document.getElementById("act-overlay").classList.remove("open");}
+function saveAct(){
+  if(!actEditId)return;
+  const h=euroNum(document.getElementById("a-hours").value);
+  const patch={};
+  patch.hours=(isNaN(h)||h<0)?null:h;
+  patch.rateId=actRateSel||null;
+  setOverride(actEditId,patch);
+  closeAct();persist();render();
+}
+function resetAct(){
+  if(!actEditId)return;
+  clearOverride(actEditId);
+  closeAct();persist();render();
+}
+function hideAct(id){
+  const ev=(S.calEvents||[]).find(e=>e.id===id);
+  const prev=evOverride(id);
+  setOverride(id,{hidden:true});
+  persist();render();
+  showToast((ev&&ev.title?ev.title:"Attività")+" esclusa",()=>{
+    if(prev&&!prev.hidden)setOverride(id,{...prev,hidden:false});
+    else clearOverride(id);
+    persist();render();hideToast();
+  });
+}
+function restoreHidden(y,m){
+  agendaHidden(y,m).forEach(ev=>{
+    const ov=evOverride(ev.id)||{};
+    if(ov.hours!=null||ov.rateId)setOverride(ev.id,{...ov,hidden:false});
+    else clearOverride(ev.id);
+  });
+  persist();render();
 }

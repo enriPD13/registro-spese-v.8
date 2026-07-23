@@ -1,6 +1,6 @@
 /* ================= EVENTS ================= */
 document.addEventListener("click",ev=>{
-  const t=ev.target.closest("[data-act],[data-fcat],[data-ffreq],[data-ifreq],[data-icat],[data-tcat],[data-tfreq],[data-ccolor],[data-gcolor],[data-rcolor]");
+  const t=ev.target.closest("[data-act],[data-fcat],[data-ffreq],[data-ifreq],[data-icat],[data-tcat],[data-tfreq],[data-ccolor],[data-gcolor],[data-rcolor],[data-arate]");
   if(!t)return;
   if(t.dataset.fcat!==undefined){
     document.querySelectorAll("#f-cats .chip").forEach(x=>x.classList.remove("active"));
@@ -29,6 +29,10 @@ document.addEventListener("click",ev=>{
   if(t.dataset.ccolor!==undefined){
     catColorSel=t.dataset.ccolor;renderCatColors();return;
   }
+  if(t.dataset.arate!==undefined){
+    actRateSel=t.dataset.arate;
+    document.getElementById("a-rates").innerHTML=actRatesHtml();return;
+  }
   if(t.dataset.rcolor!==undefined){
     rateColorSel=t.dataset.rcolor;
     document.getElementById("r-colors").innerHTML=rateColorsHtml();return;
@@ -54,7 +58,6 @@ document.addEventListener("click",ev=>{
   else if(act==="fc-mode"){S.fcMode=t.dataset.id;render();}
   else if(act==="cal-sync"){calSync(false);}
   else if(act==="cal-ignore"){calToggleIgnore(t.dataset.id,t.dataset.n||"");}
-  else if(act==="match-mode"){S.calMatchMode=t.dataset.id;persist();render();}
   else if(act==="skipwords-save"){
     S.calSkipWords=document.getElementById("skipwords").value.trim();
     S.notice="Parole di esclusione aggiornate.";persist();render();
@@ -70,6 +73,9 @@ document.addEventListener("click",ev=>{
     S.agSelDay=(S.agSelDay===n?null:n);render();
   }
   else if(act==="ag-all"){S.agSelDay=null;render();}
+  else if(act==="act-edit"){openAct(t.dataset.id);}
+  else if(act==="act-del"){hideAct(t.dataset.id);}
+  else if(act==="act-restore-all"){restoreHidden(Number(t.dataset.y),Number(t.dataset.m));}
   else if(act==="rate-new"){openRate(null);}
   else if(act==="rate-edit"){openRate(t.dataset.id);}
   else if(act==="rate-from"){openRate(null,t.dataset.id);}
@@ -180,7 +186,11 @@ document.getElementById("btn-add").addEventListener("click",()=>{
   if(S.tab==="entrate"){openInc(null);}
   else{S.editId=null;openForm();}
 });
-document.getElementById("btn-scan").addEventListener("click",()=>document.getElementById("scan-input").click());
+document.getElementById("btn-scan").addEventListener("click",()=>{
+  if(S.tab==="tariffe"){S.tab="agenda-config";render();return;}
+  if(S.tab==="agenda-config"){S.tab="tariffe";render();return;}
+  document.getElementById("scan-input").click();
+});
 document.getElementById("scan-input").addEventListener("change",ev=>{
   const f=ev.target.files&&ev.target.files[0];ev.target.value="";scan(f);
 });
@@ -243,6 +253,10 @@ document.getElementById("tax-overlay").addEventListener("click",ev=>{if(ev.targe
 document.getElementById("txmove-cancel").addEventListener("click",closeTaxMove);
 document.getElementById("txmove-save").addEventListener("click",saveTaxMove);
 document.getElementById("txmove-overlay").addEventListener("click",ev=>{if(ev.target.id==="txmove-overlay")closeTaxMove();});
+document.getElementById("act-cancel").addEventListener("click",closeAct);
+document.getElementById("act-save").addEventListener("click",saveAct);
+document.getElementById("act-reset").addEventListener("click",resetAct);
+document.getElementById("act-overlay").addEventListener("click",ev=>{if(ev.target.id==="act-overlay")closeAct();});
 document.getElementById("rate-cancel").addEventListener("click",closeRate);
 document.getElementById("rate-save").addEventListener("click",saveRate);
 document.getElementById("rate-overlay").addEventListener("click",ev=>{if(ev.target.id==="rate-overlay")closeRate();});
@@ -281,6 +295,7 @@ let searchTimer=null;
 function afterRender(){
   if(S.tab==="riepilogo"){drawCharts();animateTotal();}
   if(S.tab==="entrate")drawIncomeCharts();
+  if(S.tab==="tariffe")drawAgendaDonut();
   if(S.tab==="previsioni"){
     if((S.fcMode||"mesi")==="mesi")drawForecastChart();
     else drawForecastYearsChart();

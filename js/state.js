@@ -28,12 +28,21 @@ function icon(n,s){
 }
 function mountStaticIcons(){
   document.querySelectorAll("[data-ic]").forEach(el=>{el.innerHTML=icon(el.dataset.ic);});
-  document.getElementById("btn-scan").innerHTML=icon("camera");
+  paintHeaderButton();
   document.getElementById("btn-add").innerHTML=icon("plus",26);
+}
+/* Il pulsante in alto a destra cambia con la scheda: ingranaggio in
+   "Tariffe e agenda", freccia di ritorno nelle sue impostazioni, altrove fotocamera. */
+function paintHeaderButton(){
+  const hb=document.getElementById("btn-scan");
+  if(!hb)return;
+  if(S.tab==="tariffe"){hb.innerHTML=icon("sliders");hb.title="Impostazioni agenda";}
+  else if(S.tab==="agenda-config"){hb.innerHTML=icon("chev-l");hb.title="Torna a Tariffe e agenda";}
+  else{hb.innerHTML=icon("camera");hb.title="Scansiona una spesa";}
 }
 
 /* ================= CONSTANTS ================= */
-const APP_V="8.11";
+const APP_V="8.13";
 const FREQS=[
   {id:"mensile",label:"Mensile",months:1},
   {id:"bimestrale",label:"Bimestrale",months:2},
@@ -86,7 +95,7 @@ const S={
   expenses:[],categories:DEFAULT_CATS.slice(),apiKey:"",
   tab:"riepilogo",viewY:now.getFullYear(),viewM:now.getMonth(),
   calY:now.getFullYear(),calM:now.getMonth(),selDay:null,
-  filterCat:"all",calFilter:"all",chartRange:6,search:"",busy:"",fcMode:"mesi",fcYear:null,fcCeiling:null,rates:[],calEvents:[],calList:[],calIgnored:[],calMatchMode:"etichetta",calSkipWords:"compleanno",calLastSync:0,calDayHours:8,calBreakStart:"13:00",calBreakEnd:"14:00",calMaxHours:8,agY:null,agM:null,agSelDay:null,editId:null,notice:"",error:"",
+  filterCat:"all",calFilter:"all",chartRange:6,search:"",busy:"",fcMode:"mesi",fcYear:null,fcCeiling:null,rates:[],calEvents:[],calList:[],calIgnored:[],calOverrides:{},calSkipWords:"compleanno",calLastSync:0,calDayHours:8,calBreakStart:"13:00",calBreakEnd:"14:00",calMaxHours:8,agY:null,agM:null,agSelDay:null,editId:null,notice:"",error:"",
   templates:[],gClientId:"",lastSync:0,savedAt:0,
   incomes:[],lastInvoiceSync:0,incCategories:DEFAULT_INC_CATS.slice(),
   goals:[],taxRate:30,taxSaved:[],
@@ -149,7 +158,7 @@ function snapshotPayload(){
 }
 async function persistLocal(){
   const ok=await store.save({expenses:S.expenses,categories:S.categories,apiKey:S.apiKey,
-    templates:S.templates,gClientId:S.gClientId,lastSync:S.lastSync,savedAt:S.savedAt,incomes:S.incomes,lastInvoiceSync:S.lastInvoiceSync,incCategories:S.incCategories,goals:S.goals,taxRate:S.taxRate,taxSaved:S.taxSaved,fcCeiling:S.fcCeiling,rates:S.rates,calDayHours:S.calDayHours,calBreakStart:S.calBreakStart,calBreakEnd:S.calBreakEnd,calMaxHours:S.calMaxHours,calEvents:S.calEvents,calList:S.calList,calIgnored:S.calIgnored,calMatchMode:S.calMatchMode,calSkipWords:S.calSkipWords,calLastSync:S.calLastSync});
+    templates:S.templates,gClientId:S.gClientId,lastSync:S.lastSync,savedAt:S.savedAt,incomes:S.incomes,lastInvoiceSync:S.lastInvoiceSync,incCategories:S.incCategories,goals:S.goals,taxRate:S.taxRate,taxSaved:S.taxSaved,fcCeiling:S.fcCeiling,rates:S.rates,calDayHours:S.calDayHours,calBreakStart:S.calBreakStart,calBreakEnd:S.calBreakEnd,calMaxHours:S.calMaxHours,calEvents:S.calEvents,calList:S.calList,calIgnored:S.calIgnored,calOverrides:S.calOverrides,calSkipWords:S.calSkipWords,calLastSync:S.calLastSync});
   if(!ok&&store.mode!=="none"){S.error="Salvataggio non riuscito: i dati restano in memoria per questa sessione.";}
   if(ok&&store.mode==="local")snapshots.save(snapshotPayload());
 }

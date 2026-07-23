@@ -101,12 +101,10 @@ giorno" valgono un numero di ore configurabile). Nella previsione mensile quel v
 fa da base minima: se gli impegni superano la stima statistica, e' l'agenda ad avere
 ragione. Gli eventi restano sul dispositivo e non vengono sincronizzati.
 
-Per impostazione predefinita conta SOLO l'etichetta: un evento salvato nel calendario
+Conta SOLO l'etichetta, senza alcuna configurazione: un evento salvato nel calendario
 personale non diventa lavoro anche se cita un cliente nel titolo (il caso classico e'
-"Compleanno di X CLIENTE"). La modalita' "Etichetta e titolo" riattiva il
-riconoscimento dal titolo per chi non usa calendari separati. In piu', un elenco di
-parole configurabile (di base "compleanno") esclude un impegno anche quando si trova
-dentro un calendario di lavoro.
+"Compleanno di X CLIENTE"). Un elenco di parole configurabile (di base "compleanno")
+esclude un impegno anche quando si trova dentro un calendario di lavoro.
 
 Il confronto ignora accenti, maiuscole e spazi, e a parita' di corrispondenza vince
 il nome piu' lungo (cosi' "Manpower TS" prevale su "Manpower"). Per le grafie che non
@@ -119,6 +117,21 @@ conteggio: un impegno 9-18 vale 8 ore pagate, non 9. La fascia di pausa (13:00-1
 per impostazione predefinita), il tetto massimo di ore per singola attivita' (8) e le
 ore di una giornata intera sono configurabili nella scheda. Le attivita' brevi non
 vengono toccate, anche se attraversano la fascia di pausa.
+
+La pagina si apre con un grafico a ciambella del guadagno per cliente nel mese
+mostrato, seguito dal calendario, dall'elenco delle tariffe e, in fondo, dal pulsante
+di aggiornamento dell'agenda. Tutte le impostazioni (calendari letti ed esclusi,
+etichette, clienti senza tariffa, ore e pause, parole di esclusione) stanno in una
+sottopagina raggiungibile con l'ingranaggio in alto a destra, che nelle altre schede
+resta il pulsante della fotocamera.
+
+Ogni attività si puo' correggere (matita) o escludere (X) direttamente dall'elenco.
+Poiche' l'agenda Google e' in sola lettura, si tratta di correzioni locali: si possono
+cambiare le ore conteggiate e il cliente attribuito, oppure togliere del tutto
+un'attivita' dal calcolo. Le correzioni sono legate all'identificativo dell'evento,
+quindi sopravvivono agli aggiornamenti dell'agenda, vengono sincronizzate e si possono
+annullare in qualsiasi momento ("Ripristina dall'agenda", o "Ripristina" per rimettere
+in conto tutte le attivita' escluse del mese).
 
 La scheda mostra anche un calendario mensile delle attivita' gia' programmate: ogni
 giorno riporta il compenso previsto e un puntino del colore del cliente, e toccando
