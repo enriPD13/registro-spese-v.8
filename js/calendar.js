@@ -32,16 +32,33 @@ function rateForTitle(text){
   return best;
 }
 
-/* Riconoscimento di un evento: l'etichetta del calendario ha la precedenza sul
-   titolo, perché è una classificazione voluta da te e quindi più affidabile. */
+/* Parole che escludono un impegno anche se sta in un calendario di lavoro
+   (es. il compleanno di una collega salvato nel calendario del cliente). */
+function eventSkipped(ev){
+  const words=String(S.calSkipWords||"").split(",").map(x=>calNorm(x)).filter(Boolean);
+  if(!words.length)return false;
+  const t=calNorm(ev&&ev.title||"");
+  return words.some(x=>t.includes(x));
+}
+
+/* Riconoscimento di un evento.
+   Modalità "etichetta" (predefinita): conta solo il calendario di appartenenza,
+   perché è una classificazione voluta da te. Un evento nel calendario personale
+   non diventa lavoro solo perché cita un cliente nel titolo.
+   Modalità "etichetta-titolo": se l'etichetta non basta, si guarda anche il titolo. */
 function rateForEvent(ev){
   if(!ev)return null;
-  return rateForTitle(ev.cal)||rateForTitle(ev.title);
+  if(eventSkipped(ev))return null;
+  const byLabel=rateForTitle(ev.cal);
+  if(byLabel)return byLabel;
+  if((S.calMatchMode||"etichetta")==="etichetta")return null;
+  return rateForTitle(ev.title);
 }
 function matchSource(ev){
   if(!ev)return null;
+  if(eventSkipped(ev))return null;
   if(rateForTitle(ev.cal))return "etichetta";
-  if(rateForTitle(ev.title))return "titolo";
+  if((S.calMatchMode||"etichetta")!=="etichetta"&&rateForTitle(ev.title))return "titolo";
   return null;
 }
 
@@ -274,6 +291,30 @@ function renderTariffe(){
     <div class="small" style="margin-top:10px">
       Gli impegni restano sul dispositivo. Serve aver attivato l'API Calendar su Google Cloud
       e aver sincronizzato il calendario Apple con Google.
+    </div>
+  </div>
+
+  <div class="card">
+    <span class="label">Come riconoscere le attività</span>
+    <div class="chips" style="margin-bottom:10px">
+      ${["etichetta","etichetta-titolo"].map(m=>'<button class="chip '+
+        ((S.calMatchMode||"etichetta")===m?"active":"")+'" data-act="match-mode" data-id="'+m+'">'+
+        (m==="etichetta"?"Solo etichetta":"Etichetta e titolo")+'</button>').join("")}
+    </div>
+    <div class="small" style="margin-bottom:14px">
+      ${(S.calMatchMode||"etichetta")==="etichetta"
+        ? "Conta <b>solo il calendario</b> in cui è salvato l'impegno. Un evento nel calendario personale non viene conteggiato nemmeno se cita un cliente nel titolo — è la scelta consigliata."
+        : "Se l'etichetta non corrisponde a nessun cliente, si guarda anche il titolo dell'evento. Più permissivo, ma può conteggiare per errore eventi personali che citano un cliente."}
+    </div>
+    <label class="label">Parole che escludono un impegno</label>
+    <div class="frow">
+      <input class="input" id="skipwords" placeholder="Es. compleanno, ferie, permesso"
+        value="${esc(S.calSkipWords||"")}" style="flex:2">
+      <button class="btn btn-ghost" data-act="skipwords-save" style="flex:1">Salva</button>
+    </div>
+    <div class="small" style="margin-top:8px">
+      Separate da virgola. Un impegno il cui titolo contiene una di queste parole non viene
+      mai conteggiato, nemmeno dentro un calendario di lavoro.
     </div>
   </div>
 

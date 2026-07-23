@@ -22,6 +22,8 @@
     if(Array.isArray(data.calEvents))S.calEvents=data.calEvents;
     if(Array.isArray(data.calList))S.calList=data.calList;
     if(Array.isArray(data.calIgnored))S.calIgnored=data.calIgnored;
+    if(data.calMatchMode)S.calMatchMode=data.calMatchMode;
+    if(data.calSkipWords!=null)S.calSkipWords=data.calSkipWords;
     if(data.calLastSync)S.calLastSync=data.calLastSync;
     if(data.calDayHours)S.calDayHours=Number(data.calDayHours)||8;
     if(data.calBreakStart)S.calBreakStart=data.calBreakStart;

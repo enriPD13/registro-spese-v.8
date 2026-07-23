@@ -1,6 +1,6 @@
 /* ================= BACKUP ================= */
 function exportBackup(){
-  const blob=new Blob([JSON.stringify({expenses:S.expenses,categories:S.categories,templates:S.templates,incomes:S.incomes,incCategories:S.incCategories,goals:S.goals,taxRate:S.taxRate,taxSaved:S.taxSaved,fcCeiling:S.fcCeiling,rates:S.rates,calDayHours:S.calDayHours,calBreakStart:S.calBreakStart,calBreakEnd:S.calBreakEnd,calMaxHours:S.calMaxHours,calIgnored:S.calIgnored},null,2)],{type:"application/json"});
+  const blob=new Blob([JSON.stringify({expenses:S.expenses,categories:S.categories,templates:S.templates,incomes:S.incomes,incCategories:S.incCategories,goals:S.goals,taxRate:S.taxRate,taxSaved:S.taxSaved,fcCeiling:S.fcCeiling,rates:S.rates,calDayHours:S.calDayHours,calBreakStart:S.calBreakStart,calBreakEnd:S.calBreakEnd,calMaxHours:S.calMaxHours,calIgnored:S.calIgnored,calMatchMode:S.calMatchMode,calSkipWords:S.calSkipWords},null,2)],{type:"application/json"});
   const a=document.createElement("a");
   a.href=URL.createObjectURL(blob);
   a.download="registro-spese-backup-"+todayISO()+".json";
@@ -26,6 +26,8 @@ function importBackup(file){
       if(d.calBreakEnd)S.calBreakEnd=d.calBreakEnd;
       if(d.calMaxHours!=null)S.calMaxHours=Number(d.calMaxHours)||0;
       if(Array.isArray(d.calIgnored))S.calIgnored=d.calIgnored;
+      if(d.calMatchMode)S.calMatchMode=d.calMatchMode;
+      if(d.calSkipWords!=null)S.calSkipWords=d.calSkipWords;
       S.notice="Backup importato: "+S.expenses.length+" spese, "+S.incomes.length+" entrate.";
       persist();render();
     }catch(e){S.error="File di backup non valido.";render();}

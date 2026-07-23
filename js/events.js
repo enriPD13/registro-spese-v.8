@@ -54,6 +54,11 @@ document.addEventListener("click",ev=>{
   else if(act==="fc-mode"){S.fcMode=t.dataset.id;render();}
   else if(act==="cal-sync"){calSync(false);}
   else if(act==="cal-ignore"){calToggleIgnore(t.dataset.id,t.dataset.n||"");}
+  else if(act==="match-mode"){S.calMatchMode=t.dataset.id;persist();render();}
+  else if(act==="skipwords-save"){
+    S.calSkipWords=document.getElementById("skipwords").value.trim();
+    S.notice="Parole di esclusione aggiornate.";persist();render();
+  }
   else if(act==="ag-month"){
     const now=new Date();
     let y=(S.agY==null?now.getFullYear():S.agY), m=(S.agM==null?now.getMonth():S.agM);

@@ -101,6 +101,13 @@ giorno" valgono un numero di ore configurabile). Nella previsione mensile quel v
 fa da base minima: se gli impegni superano la stima statistica, e' l'agenda ad avere
 ragione. Gli eventi restano sul dispositivo e non vengono sincronizzati.
 
+Per impostazione predefinita conta SOLO l'etichetta: un evento salvato nel calendario
+personale non diventa lavoro anche se cita un cliente nel titolo (il caso classico e'
+"Compleanno di X CLIENTE"). La modalita' "Etichetta e titolo" riattiva il
+riconoscimento dal titolo per chi non usa calendari separati. In piu', un elenco di
+parole configurabile (di base "compleanno") esclude un impegno anche quando si trova
+dentro un calendario di lavoro.
+
 Il confronto ignora accenti, maiuscole e spazi, e a parita' di corrispondenza vince
 il nome piu' lungo (cosi' "Manpower TS" prevale su "Manpower"). Per le grafie che non
 combaciano lettera per lettera si usa il campo varianti della tariffa. Se non c'e'
