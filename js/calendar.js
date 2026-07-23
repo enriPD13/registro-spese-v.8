@@ -121,37 +121,51 @@ async function calSync(silent){
   if(!silent){S.busy="Lettura agenda…";render();}
   try{
     const now=new Date();
-    const timeMin=new Date(now.getFullYear(),now.getMonth(),1).toISOString();
+    /* si parte dall'anno scorso per poter rivedere anche i mesi passati */
+    const timeMin=new Date(now.getFullYear()-1,0,1).toISOString();
     const timeMax=new Date(now.getFullYear()+1,11,31).toISOString();
 
-    const rl=await gFetch("https://www.googleapis.com/calendar/v3/users/me/calendarList?fields=items(id,summary,selected)");
+    const rl=await gFetch("https://www.googleapis.com/calendar/v3/users/me/calendarList?fields=items(id,summary,summaryOverride,selected,primary,accessRole)");
     const jl=await rl.json();
-    const cals=(jl.items||[]).filter(c=>c.selected!==false);
+    if(jl.error)throw new Error(jl.error.message||"elenco calendari non disponibile");
+    /* si leggono TUTTI i calendari, anche quelli deselezionati o nascosti */
+    const cals=(jl.items||[]);
 
-    const out=[];
+    const out=[],list=[];
     for(const c of cals){
       const url="https://www.googleapis.com/calendar/v3/calendars/"+encodeURIComponent(c.id)+
         "/events?singleEvents=true&orderBy=startTime&maxResults=2500"+
         "&timeMin="+encodeURIComponent(timeMin)+"&timeMax="+encodeURIComponent(timeMax)+
         "&fields=items(id,summary,start,end,status)";
-      let r;
-      try{ r=await gFetch(url); }catch(e){ continue; }   // calendario non leggibile: si salta
-      const j=await r.json();
-      (j.items||[]).forEach(ev=>{
-        if(ev.status==="cancelled")return;
-        const allDay=!!(ev.start&&ev.start.date);
-        const start=allDay?ev.start.date+"T00:00:00":(ev.start&&ev.start.dateTime);
-        const end=allDay?(ev.end&&ev.end.date)+"T00:00:00":(ev.end&&ev.end.dateTime);
-        if(!start)return;
-        out.push({id:ev.id,title:ev.summary||"",start,end:end||start,allDay,cal:c.summary||""});
-      });
+      const nome=c.summaryOverride||c.summary||c.id;   // il nome scelto in Google vince
+      let letti=0,err=null;
+      try{
+        const r=await gFetch(url);
+        const j=await r.json();
+        if(j.error){err=j.error.message||"non leggibile";}
+        else{
+          (j.items||[]).forEach(ev=>{
+            if(ev.status==="cancelled")return;
+            const allDay=!!(ev.start&&ev.start.date);
+            const start=allDay?ev.start.date+"T00:00:00":(ev.start&&ev.start.dateTime);
+            const end=allDay?(ev.end&&ev.end.date)+"T00:00:00":(ev.end&&ev.end.dateTime);
+            if(!start)return;
+            out.push({id:ev.id,title:ev.summary||"",start,end:end||start,allDay,cal:nome});
+            letti++;
+          });
+        }
+      }catch(e){ err=(e&&e.message)?e.message:"errore di lettura"; }
+      list.push({id:c.id,name:nome,count:letti,error:err,
+        nascosto:c.selected===false,principale:!!c.primary,
+        iscritto:c.accessRole==="reader"&&!c.primary});
     }
     S.calEvents=out;
+    S.calList=list;
     S.calLastSync=Date.now();
     S.busy="";
     const matched=out.filter(e=>rateForEvent(e)).length;
-    S.notice=out.length+(out.length===1?" impegno letto":" impegni letti")+
-      ", "+matched+" con tariffa riconosciuta.";
+    S.notice=list.length+(list.length===1?" calendario":" calendari")+" letti · "+
+      out.length+(out.length===1?" impegno":" impegni")+", "+matched+" con tariffa.";
     persist();render();
   }catch(err){
     S.busy="";
@@ -236,6 +250,28 @@ function renderTariffe(){
       e aver sincronizzato il calendario Apple con Google.
     </div>
   </div>
+
+  ${(()=>{
+    const list=S.calList||[];
+    if(!list.length)return "";
+    return '<div class="card"><span class="label">Calendari trovati su Google</span>'+
+      '<div class="small" style="margin-bottom:10px">Questi sono i calendari che il tuo account Google espone. Se qui non compare un\'etichetta che usi sull\'iPhone, quel calendario è su iCloud e non arriva a Google.</div>'+
+      list.map(c=>{
+        const r=rateForTitle(c.name);
+        const stato=c.error?'<span style="color:#C46A4E">'+esc(c.error)+'</span>'
+          :(c.count+(c.count===1?" impegno":" impegni")+
+            (c.iscritto?" · iscritto (aggiornato da Google con ritardo)":"")+
+            (c.nascosto?" · nascosto":""));
+        return '<div class="row">'+
+          '<span style="width:11px;height:11px;border-radius:4px;flex-shrink:0;background:'+
+            (r?rateColor(r):"var(--line)")+'"></span>'+
+          '<div class="rdesc"><div class="rtitle">'+esc(c.name)+(c.principale?' <span class="rtag tag-var">principale</span>':'')+'</div>'+
+          '<div class="rmeta">'+stato+'</div></div>'+
+          (r?'<span class="small" style="color:var(--accent-text);font-weight:800">'+eur(r.rate)+'/ora</span>'
+            :'<button class="btn btn-ghost" style="padding:7px 13px;font-size:12.5px" data-act="rate-from" data-id="'+esc(c.name)+'">Tariffa</button>')+
+        '</div>';
+      }).join("")+'</div>';
+  })()}
 
   ${renderAgendaCalendar()}
 

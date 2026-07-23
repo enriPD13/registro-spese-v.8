@@ -33,7 +33,7 @@ function mountStaticIcons(){
 }
 
 /* ================= CONSTANTS ================= */
-const APP_V="8.7";
+const APP_V="8.9";
 const FREQS=[
   {id:"mensile",label:"Mensile",months:1},
   {id:"bimestrale",label:"Bimestrale",months:2},
@@ -86,7 +86,7 @@ const S={
   expenses:[],categories:DEFAULT_CATS.slice(),apiKey:"",
   tab:"riepilogo",viewY:now.getFullYear(),viewM:now.getMonth(),
   calY:now.getFullYear(),calM:now.getMonth(),selDay:null,
-  filterCat:"all",calFilter:"all",chartRange:6,search:"",busy:"",fcMode:"mesi",fcYear:null,fcCeiling:null,rates:[],calEvents:[],calLastSync:0,calDayHours:8,calBreakStart:"13:00",calBreakEnd:"14:00",calMaxHours:8,agY:null,agM:null,agSelDay:null,editId:null,notice:"",error:"",
+  filterCat:"all",calFilter:"all",chartRange:6,search:"",busy:"",fcMode:"mesi",fcYear:null,fcCeiling:null,rates:[],calEvents:[],calList:[],calLastSync:0,calDayHours:8,calBreakStart:"13:00",calBreakEnd:"14:00",calMaxHours:8,agY:null,agM:null,agSelDay:null,editId:null,notice:"",error:"",
   templates:[],gClientId:"",lastSync:0,savedAt:0,
   incomes:[],lastInvoiceSync:0,incCategories:DEFAULT_INC_CATS.slice(),
   goals:[],taxRate:30,taxSaved:[],
@@ -149,7 +149,7 @@ function snapshotPayload(){
 }
 async function persistLocal(){
   const ok=await store.save({expenses:S.expenses,categories:S.categories,apiKey:S.apiKey,
-    templates:S.templates,gClientId:S.gClientId,lastSync:S.lastSync,savedAt:S.savedAt,incomes:S.incomes,lastInvoiceSync:S.lastInvoiceSync,incCategories:S.incCategories,goals:S.goals,taxRate:S.taxRate,taxSaved:S.taxSaved,fcCeiling:S.fcCeiling,rates:S.rates,calDayHours:S.calDayHours,calBreakStart:S.calBreakStart,calBreakEnd:S.calBreakEnd,calMaxHours:S.calMaxHours,calEvents:S.calEvents,calLastSync:S.calLastSync});
+    templates:S.templates,gClientId:S.gClientId,lastSync:S.lastSync,savedAt:S.savedAt,incomes:S.incomes,lastInvoiceSync:S.lastInvoiceSync,incCategories:S.incCategories,goals:S.goals,taxRate:S.taxRate,taxSaved:S.taxSaved,fcCeiling:S.fcCeiling,rates:S.rates,calDayHours:S.calDayHours,calBreakStart:S.calBreakStart,calBreakEnd:S.calBreakEnd,calMaxHours:S.calMaxHours,calEvents:S.calEvents,calList:S.calList,calLastSync:S.calLastSync});
   if(!ok&&store.mode!=="none"){S.error="Salvataggio non riuscito: i dati restano in memoria per questa sessione.";}
   if(ok&&store.mode==="local")snapshots.save(snapshotPayload());
 }

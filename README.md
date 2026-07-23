@@ -118,6 +118,18 @@ giorno riporta il compenso previsto e un puntino del colore del cliente, e tocca
 un giorno si vede il dettaglio di ogni singola attivita' (orario, ore x tariffa,
 compenso). Sotto il calendario, l'elenco completo delle attivita' del mese.
 
+E' possibile tenere gli impegni su iCloud e far leggere a Google un calendario
+pubblicato: in quel caso Google si "iscrive" al feed iCloud e lo aggiorna con
+ritardo (da qualche ora a un giorno). L'app segnala questi calendari come iscritti e
+rispetta il nome eventualmente assegnato loro in Google.
+
+La scheda elenca tutti i calendari che l'account Google espone, con il numero di
+impegni letti da ciascuno ed eventuali errori: serve a capire subito se un'etichetta
+usata sull'iPhone non arriva a Google. Vengono letti anche i calendari deselezionati
+o nascosti nell'interfaccia di Google Calendar. Attenzione: i calendari che vivono
+solo su iCloud non sono visibili a Google, e quindi nemmeno all'app - vanno ricreati
+sotto l'account Google.
+
 Per attivarla: abilitare l'API Google Calendar sul progetto Cloud, ri-autorizzare
 l'accesso dall'app (viene chiesto il permesso di sola lettura del calendario) e, se
 si usa il calendario Apple, sincronizzarlo con l'account Google dalle impostazioni
