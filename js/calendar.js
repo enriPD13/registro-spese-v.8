@@ -112,6 +112,23 @@ function calEventHours(ev){
   return calHoursDetail(ev).hours;
 }
 
+/* Calendari che non devono essere letti (es. quello personale). */
+function calIsIgnored(id){return (S.calIgnored||[]).indexOf(id)>=0;}
+function calToggleIgnore(id,nome){
+  if(!Array.isArray(S.calIgnored))S.calIgnored=[];
+  if(calIsIgnored(id)){
+    S.calIgnored=S.calIgnored.filter(x=>x!==id);
+    S.notice="«"+nome+"» sarà letto al prossimo aggiornamento agenda.";
+  }else{
+    S.calIgnored=S.calIgnored.concat([id]);
+    /* via subito i suoi impegni, senza aspettare una nuova lettura */
+    S.calEvents=(S.calEvents||[]).filter(e=>e.calId?e.calId!==id:e.cal!==nome);
+    S.calList=(S.calList||[]).map(x=>x.id===id?{...x,count:0}:x);
+    S.notice="«"+nome+"» escluso dal conteggio.";
+  }
+  persist();render();
+}
+
 /* --- lettura da Google Calendar --- */
 async function calSync(silent){
   if(!gTokenValid()){
@@ -139,6 +156,12 @@ async function calSync(silent){
         "&fields=items(id,summary,start,end,status)";
       const nome=c.summaryOverride||c.summary||c.id;   // il nome scelto in Google vince
       let letti=0,err=null;
+      if(calIsIgnored(c.id)){
+        list.push({id:c.id,name:nome,count:0,error:null,ignorato:true,
+          nascosto:c.selected===false,principale:!!c.primary,
+          iscritto:c.accessRole==="reader"&&!c.primary});
+        continue;
+      }
       try{
         const r=await gFetch(url);
         const j=await r.json();
@@ -150,12 +173,12 @@ async function calSync(silent){
             const start=allDay?ev.start.date+"T00:00:00":(ev.start&&ev.start.dateTime);
             const end=allDay?(ev.end&&ev.end.date)+"T00:00:00":(ev.end&&ev.end.dateTime);
             if(!start)return;
-            out.push({id:ev.id,title:ev.summary||"",start,end:end||start,allDay,cal:nome});
+            out.push({id:ev.id,title:ev.summary||"",start,end:end||start,allDay,cal:nome,calId:c.id});
             letti++;
           });
         }
       }catch(e){ err=(e&&e.message)?e.message:"errore di lettura"; }
-      list.push({id:c.id,name:nome,count:letti,error:err,
+      list.push({id:c.id,name:nome,count:letti,error:err,ignorato:false,
         nascosto:c.selected===false,principale:!!c.primary,
         iscritto:c.accessRole==="reader"&&!c.primary});
     }
@@ -164,7 +187,10 @@ async function calSync(silent){
     S.calLastSync=Date.now();
     S.busy="";
     const matched=out.filter(e=>rateForEvent(e)).length;
-    S.notice=list.length+(list.length===1?" calendario":" calendari")+" letti · "+
+    const ign=list.filter(x=>x.ignorato).length;
+    const nl=list.length-ign;
+    S.notice=nl+(nl===1?" calendario letto":" calendari letti")+
+      (ign?" ("+ign+" esclus"+(ign===1?"o":"i")+")":"")+" · "+
       out.length+(out.length===1?" impegno":" impegni")+", "+matched+" con tariffa.";
     persist();render();
   }catch(err){
@@ -255,20 +281,24 @@ function renderTariffe(){
     const list=S.calList||[];
     if(!list.length)return "";
     return '<div class="card"><span class="label">Calendari trovati su Google</span>'+
-      '<div class="small" style="margin-bottom:10px">Questi sono i calendari che il tuo account Google espone. Se qui non compare un\'etichetta che usi sull\'iPhone, quel calendario è su iCloud e non arriva a Google.</div>'+
+      '<div class="small" style="margin-bottom:10px">I calendari che il tuo account Google espone. Con ✕ escludi quelli che non riguardano il lavoro (es. il calendario personale): i loro impegni non vengono conteggiati.</div>'+
       list.map(c=>{
         const r=rateForTitle(c.name);
-        const stato=c.error?'<span style="color:#C46A4E">'+esc(c.error)+'</span>'
+        const off=c.ignorato||calIsIgnored(c.id);
+        const stato=off?'<span style="opacity:.7">escluso dal conteggio</span>'
+          :(c.error?'<span style="color:#C46A4E">'+esc(c.error)+'</span>'
           :(c.count+(c.count===1?" impegno":" impegni")+
-            (c.iscritto?" · iscritto (aggiornato da Google con ritardo)":"")+
-            (c.nascosto?" · nascosto":""));
-        return '<div class="row">'+
+            (c.iscritto?" · iscritto (ritardo di aggiornamento)":"")+
+            (c.nascosto?" · nascosto":"")));
+        return '<div class="row"'+(off?' style="opacity:.55"':'')+'>'+
           '<span style="width:11px;height:11px;border-radius:4px;flex-shrink:0;background:'+
-            (r?rateColor(r):"var(--line)")+'"></span>'+
+            (off?"var(--line)":(r?rateColor(r):"var(--line)"))+'"></span>'+
           '<div class="rdesc"><div class="rtitle">'+esc(c.name)+(c.principale?' <span class="rtag tag-var">principale</span>':'')+'</div>'+
           '<div class="rmeta">'+stato+'</div></div>'+
-          (r?'<span class="small" style="color:var(--accent-text);font-weight:800">'+eur(r.rate)+'/ora</span>'
-            :'<button class="btn btn-ghost" style="padding:7px 13px;font-size:12.5px" data-act="rate-from" data-id="'+esc(c.name)+'">Tariffa</button>')+
+          (!off&&r?'<span class="small" style="color:var(--accent-text);font-weight:800">'+eur(r.rate)+'/ora</span>':'')+
+          (!off&&!r?'<button class="btn btn-ghost" style="padding:7px 12px;font-size:12.5px" data-act="rate-from" data-id="'+esc(c.name)+'">Tariffa</button>':'')+
+          '<button class="iconbtn" aria-label="'+(off?"Includi":"Escludi")+' calendario" data-act="cal-ignore" data-id="'+esc(c.id)+'" data-n="'+esc(c.name)+'">'+
+            icon(off?"plus":"x",18)+'</button>'+
         '</div>';
       }).join("")+'</div>';
   })()}

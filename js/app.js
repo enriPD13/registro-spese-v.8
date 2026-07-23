@@ -21,6 +21,7 @@
     if(Array.isArray(data.rates))S.rates=data.rates;
     if(Array.isArray(data.calEvents))S.calEvents=data.calEvents;
     if(Array.isArray(data.calList))S.calList=data.calList;
+    if(Array.isArray(data.calIgnored))S.calIgnored=data.calIgnored;
     if(data.calLastSync)S.calLastSync=data.calLastSync;
     if(data.calDayHours)S.calDayHours=Number(data.calDayHours)||8;
     if(data.calBreakStart)S.calBreakStart=data.calBreakStart;

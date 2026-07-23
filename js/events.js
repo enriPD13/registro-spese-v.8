@@ -53,6 +53,7 @@ document.addEventListener("click",ev=>{
   else if(act==="range"){S.chartRange=Number(t.dataset.n);render();}
   else if(act==="fc-mode"){S.fcMode=t.dataset.id;render();}
   else if(act==="cal-sync"){calSync(false);}
+  else if(act==="cal-ignore"){calToggleIgnore(t.dataset.id,t.dataset.n||"");}
   else if(act==="ag-month"){
     const now=new Date();
     let y=(S.agY==null?now.getFullYear():S.agY), m=(S.agM==null?now.getMonth():S.agM);

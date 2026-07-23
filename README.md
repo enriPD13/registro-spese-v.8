@@ -123,6 +123,10 @@ pubblicato: in quel caso Google si "iscrive" al feed iCloud e lo aggiorna con
 ritardo (da qualche ora a un giorno). L'app segnala questi calendari come iscritti e
 rispetta il nome eventualmente assegnato loro in Google.
 
+Ogni calendario puo' essere escluso dal conteggio con un tocco (utile per quello
+personale): i suoi impegni spariscono subito e non vengono piu' letti agli
+aggiornamenti successivi, finche' non lo si reinclude. La scelta viene sincronizzata.
+
 La scheda elenca tutti i calendari che l'account Google espone, con il numero di
 impegni letti da ciascuno ed eventuali errori: serve a capire subito se un'etichetta
 usata sull'iPhone non arriva a Google. Vengono letti anche i calendari deselezionati
