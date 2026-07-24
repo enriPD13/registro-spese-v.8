@@ -50,7 +50,15 @@ scarica sempre la versione più recente all'apertura. Non serve più il pulsante
 
 ## Funzioni principali
 
-**Spese** — voci una tantum e ricorrenti (da mensili ad annuali), categorie con
+**Spese** — l'elenco e' ordinato per data (dalle piu' recenti) e il pulsante in alto a
+destra apre i filtri: ordinamento (data, importo, alfabetico), tipo (ricorrenti o una
+tantum) e periodo (30 giorni, 3 mesi, anno corrente o intervallo scelto). Quando un
+filtro e' attivo il pulsante mostra un pallino e compare una barra riassuntiva con
+"Azzera".
+Le stesse logiche valgono per **Scadenze**, dove i filtri sono orizzonte temporale
+(7, 30, 90 giorni), categoria e ordinamento per data o importo.
+
+Voci una tantum e ricorrenti (da mensili ad annuali), categorie con
 colore personalizzabile, spese variabili (bollette) che stimano l'importo futuro
 sullo storico, catalogo di voci suggerite, ricerca per nome/categoria/importo.
 
@@ -179,6 +187,16 @@ categoria (richiede una chiave API Groq gratuita, salvata solo sul dispositivo).
    `https://<tuo-utente>.github.io` (senza percorso e senza barra finale).
 3. In "Pubblico" aggiungi il tuo indirizzo Gmail come utente di prova.
 4. Incolla l'ID client in Impostazioni → Google Drive.
+
+## Pulsanti fluttuanti
+
+L'intestazione contiene solo il titolo della scheda. In basso a destra ci sono al
+massimo due pulsanti circolari verdi: il "+" per aggiungere una spesa, presente solo
+nel Riepilogo, e un secondo pulsante che cambia funzione con la scheda - fotocamera
+per scansionare uno scontrino, imbuto per i filtri in Spese e Scadenze, ingranaggio
+in Tariffe e agenda, freccia di ritorno nelle sue impostazioni. Nel Calendario non
+compare alcun pulsante. Quando ci sono entrambi, il secondo si posiziona sopra al
+"+"; alla pressione torna chiaro, come i vecchi tasti in alto.
 
 ## Requisiti
 

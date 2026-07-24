@@ -150,6 +150,16 @@
     transition:transform .18s}
   .fab:active{transform:scale(.88) rotate(90deg)}
 
+  /* secondo pulsante fluttuante (fotocamera, filtri, impostazioni):
+     stesso verde del +, ma alla pressione torna chiaro come i vecchi tasti in alto */
+  .fab-2{bottom:calc(84px + env(safe-area-inset-bottom))}
+  .fab-2.up{bottom:calc(152px + env(safe-area-inset-bottom))}
+  .fab-2:active{transform:scale(.92);background:var(--card);color:var(--ink);
+    box-shadow:var(--shadow)}
+  .fab-2.has-dot::after{content:"";position:absolute;top:12px;right:12px;
+    width:9px;height:9px;border-radius:50%;background:#fff;
+    box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 70%,transparent)}
+
   /* overlays */
   .overlay{position:fixed;inset:0;background:rgba(10,12,15,.5);z-index:50;
     display:flex;align-items:flex-end;justify-content:center;

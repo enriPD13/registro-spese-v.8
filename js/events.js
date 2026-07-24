@@ -98,6 +98,20 @@ document.addEventListener("click",ev=>{
   }
   else if(act==="filter"){S.filterCat=t.dataset.id;render();}
   else if(act==="search-clear"){S.search="";render();}
+  else if(act==="fsp-sort"){S.expSort=t.dataset.id;persist();paintFiltriSpese();render();}
+  else if(act==="fsp-type"){S.expType=t.dataset.id;persist();paintFiltriSpese();render();}
+  else if(act==="fsp-period"){S.expPeriod=t.dataset.id;persist();paintFiltriSpese();render();}
+  else if(act==="spese-reset"){
+    S.expSort="data-desc";S.expType="all";S.expPeriod="sempre";S.expFrom="";S.expTo="";
+    persist();paintFiltriSpese();render();
+  }
+  else if(act==="fsc-range"){S.scadRange=Number(t.dataset.id);persist();paintFiltriScadenze();render();}
+  else if(act==="fsc-sort"){S.scadSort=t.dataset.id;persist();paintFiltriScadenze();render();}
+  else if(act==="fsc-cat"){S.scadCat=t.dataset.id;persist();paintFiltriScadenze();render();}
+  else if(act==="scad-reset"){
+    S.scadRange=0;S.scadCat="all";S.scadSort="data";
+    persist();paintFiltriScadenze();render();
+  }
   else if(act==="edit"){const e=S.expenses.find(x=>x.id===t.dataset.id);if(e){S.editId=e.id;openForm({...e,amount:e.amount!=null?String(e.amount):"",freq:e.freq||"mensile"});}}
   else if(act==="del"){deleteWithUndo(()=>S.expenses,a=>S.expenses=a,t.dataset.id,"Spesa");}
   else if(act==="cat-new"){openCat(null,"exp");}
@@ -187,10 +201,44 @@ document.getElementById("btn-add").addEventListener("click",()=>{
   else{S.editId=null;openForm();}
 });
 document.getElementById("btn-scan").addEventListener("click",()=>{
+  if(S.tab==="spese"){openFiltriSpese();return;}
+  if(S.tab==="scadenze"){openFiltriScadenze();return;}
   if(S.tab==="tariffe"){S.tab="agenda-config";render();return;}
   if(S.tab==="agenda-config"){S.tab="tariffe";render();return;}
   document.getElementById("scan-input").click();
 });
+
+/* ---------- filtri spese ---------- */
+const SORT_OPTS=[["data-desc","Più recenti"],["data-asc","Meno recenti"],
+  ["importo-desc","Importo ↓"],["importo-asc","Importo ↑"],["alfabetico","A-Z"]];
+const TYPE_OPTS=[["all","Tutte"],["ricorrenti","Ricorrenti"],["una-tantum","Una tantum"]];
+const PERIOD_OPTS=[["sempre","Sempre"],["30g","30 giorni"],["3mesi","3 mesi"],
+  ["anno","Anno corrente"],["personalizzato","Scegli date"]];
+function paintFiltriSpese(){
+  const chip=(act,val,cur,l)=>'<button class="chip '+(cur===val?"active":"")+'" data-act="'+act+'" data-id="'+val+'">'+l+'</button>';
+  document.getElementById("fsp-sort").innerHTML=SORT_OPTS.map(([v,l])=>chip("fsp-sort",v,S.expSort,l)).join("");
+  document.getElementById("fsp-type").innerHTML=TYPE_OPTS.map(([v,l])=>chip("fsp-type",v,S.expType,l)).join("");
+  document.getElementById("fsp-period").innerHTML=PERIOD_OPTS.map(([v,l])=>chip("fsp-period",v,S.expPeriod,l)).join("");
+  const dz=document.getElementById("fsp-dates");
+  dz.style.display=S.expPeriod==="personalizzato"?"flex":"none";
+  document.getElementById("fsp-from").value=S.expFrom||"";
+  document.getElementById("fsp-to").value=S.expTo||"";
+}
+function openFiltriSpese(){paintFiltriSpese();document.getElementById("fsp-overlay").classList.add("open");}
+function closeFiltriSpese(){document.getElementById("fsp-overlay").classList.remove("open");}
+
+/* ---------- filtri scadenze ---------- */
+const RANGE_OPTS=[[0,"Tutte"],[7,"7 giorni"],[30,"30 giorni"],[90,"90 giorni"]];
+const SCADSORT_OPTS=[["data","Data"],["importo","Importo"]];
+function paintFiltriScadenze(){
+  const chip=(act,val,cur,l)=>'<button class="chip '+(String(cur)===String(val)?"active":"")+'" data-act="'+act+'" data-id="'+val+'">'+l+'</button>';
+  document.getElementById("fsc-range").innerHTML=RANGE_OPTS.map(([v,l])=>chip("fsc-range",v,S.scadRange,l)).join("");
+  document.getElementById("fsc-sort").innerHTML=SCADSORT_OPTS.map(([v,l])=>chip("fsc-sort",v,S.scadSort,l)).join("");
+  document.getElementById("fsc-cat").innerHTML=chip("fsc-cat","all",S.scadCat,"Tutte")+
+    S.categories.map(c=>chip("fsc-cat",c.id,S.scadCat,esc(c.name))).join("");
+}
+function openFiltriScadenze(){paintFiltriScadenze();document.getElementById("fsc-overlay").classList.add("open");}
+function closeFiltriScadenze(){document.getElementById("fsc-overlay").classList.remove("open");}
 document.getElementById("scan-input").addEventListener("change",ev=>{
   const f=ev.target.files&&ev.target.files[0];ev.target.value="";scan(f);
 });
@@ -253,6 +301,12 @@ document.getElementById("tax-overlay").addEventListener("click",ev=>{if(ev.targe
 document.getElementById("txmove-cancel").addEventListener("click",closeTaxMove);
 document.getElementById("txmove-save").addEventListener("click",saveTaxMove);
 document.getElementById("txmove-overlay").addEventListener("click",ev=>{if(ev.target.id==="txmove-overlay")closeTaxMove();});
+document.getElementById("fsp-close").addEventListener("click",closeFiltriSpese);
+document.getElementById("fsp-overlay").addEventListener("click",ev=>{if(ev.target.id==="fsp-overlay")closeFiltriSpese();});
+document.getElementById("fsp-from").addEventListener("change",ev=>{S.expFrom=ev.target.value;persist();render();});
+document.getElementById("fsp-to").addEventListener("change",ev=>{S.expTo=ev.target.value;persist();render();});
+document.getElementById("fsc-close").addEventListener("click",closeFiltriScadenze);
+document.getElementById("fsc-overlay").addEventListener("click",ev=>{if(ev.target.id==="fsc-overlay")closeFiltriScadenze();});
 document.getElementById("act-cancel").addEventListener("click",closeAct);
 document.getElementById("act-save").addEventListener("click",saveAct);
 document.getElementById("act-reset").addEventListener("click",resetAct);

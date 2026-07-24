@@ -8,7 +8,7 @@ function render(){
   charts.forEach(c=>c.destroy());charts=[];
   const tEl=document.getElementById("app-title");
   if(tEl)tEl.textContent=TAB_TITLES[S.tab]||"Registro Spese";
-  paintHeaderButton();
+  paintFloatingButtons();
   renderTabs();
   const fn={riepilogo:renderRiepilogo,calendario:renderCalendario,spese:renderSpese,
     scadenze:renderScadenze,categorie:renderCategorie,impostazioni:renderImpostazioni,
@@ -239,7 +239,23 @@ function expenseRow(e,y,m){
     '<button class="iconbtn" aria-label="Elimina spesa" data-act="del" data-id="'+e.id+'">'+icon("x",18)+'</button>'+
   '</div>';
 }
-function renderSpese(){
+/* Estremi del periodo scelto, in formato ISO. */
+function periodBounds(){
+  const now=new Date();
+  const iso=d=>d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+  switch(S.expPeriod){
+    case "30g":  {const d=new Date(now);d.setDate(d.getDate()-30);return {from:iso(d),to:iso(now)};}
+    case "3mesi":{const d=new Date(now);d.setMonth(d.getMonth()-3);return {from:iso(d),to:iso(now)};}
+    case "anno": return {from:now.getFullYear()+"-01-01",to:iso(now)};
+    case "personalizzato": return {from:S.expFrom||"",to:S.expTo||""};
+    default: return {from:"",to:""};
+  }
+}
+function speseFiltriAttivi(){
+  return (S.expSort&&S.expSort!=="data-desc")||(S.expType&&S.expType!=="all")||
+    (S.expPeriod&&S.expPeriod!=="sempre");
+}
+function speseFiltrate(){
   const q=(S.search||"").trim().toLowerCase();
   let list=S.expenses.filter(e=>S.filterCat==="all"||e.categoryId===S.filterCat);
   if(q){
@@ -250,8 +266,34 @@ function renderSpese(){
         || String(e.amount).includes(q);
     });
   }
-  list=list.slice().sort((a,b)=>a.date<b.date?1:-1);
+  if(S.expType==="ricorrenti")list=list.filter(e=>e.recurring);
+  else if(S.expType==="una-tantum")list=list.filter(e=>!e.recurring);
+  const {from,to}=periodBounds();
+  if(from)list=list.filter(e=>e.date>=from);
+  if(to)list=list.filter(e=>e.date<=to);
+  const num=e=>Number(e.amount)||0;
+  list=list.slice().sort((a,b)=>{
+    switch(S.expSort){
+      case "data-asc":     return a.date<b.date?-1:1;
+      case "importo-desc": return num(b)-num(a);
+      case "importo-asc":  return num(a)-num(b);
+      case "alfabetico":   return String(a.desc).localeCompare(String(b.desc),"it");
+      default:             return a.date<b.date?1:-1;   // più recenti prima
+    }
+  });
+  return list;
+}
+const SORT_LABEL={"data-desc":"Data, dalle più recenti","data-asc":"Data, dalle più vecchie",
+  "importo-desc":"Importo, dal più alto","importo-asc":"Importo, dal più basso","alfabetico":"Descrizione A-Z"};
+const TYPE_LABEL={"all":"","ricorrenti":"solo ricorrenti","una-tantum":"solo una tantum"};
+const PERIOD_LABEL={"sempre":"","30g":"ultimi 30 giorni","3mesi":"ultimi 3 mesi",
+  "anno":"anno corrente","personalizzato":"periodo scelto"};
+
+function renderSpese(){
+  const q=(S.search||"").trim().toLowerCase();
+  const list=speseFiltrate();
   const tot=list.reduce((s,e)=>s+(Number(e.amount)||0),0);
+  const attivi=[TYPE_LABEL[S.expType]||"",PERIOD_LABEL[S.expPeriod]||""].filter(Boolean);
   return `
   <div class="card" style="padding:12px 14px;margin-bottom:12px">
     <div style="display:flex;align-items:center;gap:10px">
@@ -266,14 +308,43 @@ function renderSpese(){
     <button class="chip ${S.filterCat==="all"?"active":""}" data-act="filter" data-id="all">Tutte</button>
     ${S.categories.map(c=>'<button class="chip '+(S.filterCat===c.id?"active":"")+'" data-act="filter" data-id="'+c.id+'">'+esc(c.name)+'</button>').join("")}
   </div>
-  ${(q||S.filterCat!=="all")&&list.length?'<div class="small" style="margin:2px 4px 10px">'+list.length+(list.length===1?" voce":" voci")+' · '+eur(tot)+'</div>':""}
-  <div class="card">${list.length?list.map(e=>expenseRow(e)).join(""):'<div class="empty">'+icon("list",34)+(q?"Nessun risultato per «"+esc(S.search)+"».":"Nessuna spesa registrata.")+'</div>'}</div>`;
+  ${speseFiltriAttivi()?`<div class="card" style="padding:11px 14px;margin-bottom:12px">
+    <div style="display:flex;align-items:center;gap:10px">
+      <span style="color:var(--accent-text);display:flex">${icon("filter",17)}</span>
+      <div class="small" style="flex:1"><b>${esc(SORT_LABEL[S.expSort]||"")}</b>${attivi.length?" · "+esc(attivi.join(" · ")):""}</div>
+      <button class="btn btn-ghost" style="padding:6px 12px;font-size:12.5px" data-act="spese-reset">Azzera</button>
+    </div>
+  </div>`:""}
+  ${(q||S.filterCat!=="all"||speseFiltriAttivi())&&list.length?'<div class="small" style="margin:2px 4px 10px">'+list.length+(list.length===1?" voce":" voci")+' · '+eur(tot)+'</div>':""}
+  <div class="card">${list.length?list.map(e=>expenseRow(e)).join(""):'<div class="empty">'+icon("list",34)+(q?"Nessun risultato per «"+esc(S.search)+"».":"Nessuna spesa con questi filtri.")+'</div>'}</div>`;
 }
 
 /* ---------- Scadenze ---------- */
+function scadenzeFiltriAttivi(){
+  return (S.scadRange&&S.scadRange>0)||(S.scadCat&&S.scadCat!=="all")||(S.scadSort&&S.scadSort!=="data");
+}
+function scadenzeFiltrate(){
+  let up=S.expenses.filter(e=>e.recurring).map(e=>({...e,due:nextDue(e)}));
+  if(S.scadCat&&S.scadCat!=="all")up=up.filter(e=>e.categoryId===S.scadCat);
+  if(S.scadRange>0)up=up.filter(e=>daysTo(e.due)<=S.scadRange);
+  up.sort((a,b)=>S.scadSort==="importo"
+    ? (amountFor(b,b.due.getFullYear(),b.due.getMonth()).val||0)-(amountFor(a,a.due.getFullYear(),a.due.getMonth()).val||0)
+    : a.due-b.due);
+  return up;
+}
+const RANGE_LABEL={0:"Tutte le scadenze",7:"Prossimi 7 giorni",30:"Prossimi 30 giorni",90:"Prossimi 90 giorni"};
 function renderScadenze(){
-  const up=S.expenses.filter(e=>e.recurring).map(e=>({...e,due:nextDue(e)})).sort((a,b)=>a.due-b.due);
-  return '<div class="card"><span class="label">Prossime scadenze ricorrenti</span>'+
+  const up=scadenzeFiltrate();
+  const testa=scadenzeFiltriAttivi()?`<div class="card" style="padding:11px 14px;margin-bottom:12px">
+    <div style="display:flex;align-items:center;gap:10px">
+      <span style="color:var(--accent-text);display:flex">${icon("filter",17)}</span>
+      <div class="small" style="flex:1"><b>${esc(RANGE_LABEL[S.scadRange]||"Tutte le scadenze")}</b>${
+        S.scadCat!=="all"?" · "+esc(catById(S.scadCat).name):""}${
+        S.scadSort==="importo"?" · per importo":""}</div>
+      <button class="btn btn-ghost" style="padding:6px 12px;font-size:12.5px" data-act="scad-reset">Azzera</button>
+    </div>
+  </div>`:"";
+  return testa+'<div class="card"><span class="label">Prossime scadenze ricorrenti</span>'+
   (up.length?up.map(e=>{
     const d=daysTo(e.due);const urg=d<=7;
     const f=FREQS.find(x=>x.id===e.freq);
@@ -292,7 +363,7 @@ function renderScadenze(){
         (e.variable?'<button class="chip" data-act="bill" data-id="'+e.id+'" style="margin-top:6px;padding:6px 12px;font-size:12px">Registra</button>':"")+
       '</div>'+
     '</div>';}).join("")
-  :'<div class="empty">'+icon("clock",34)+'Nessuna spesa ricorrente.<br>Aggiungi una spesa e attiva "Ricorrente".</div>')+'</div>';
+  :'<div class="empty">'+icon("clock",34)+(scadenzeFiltriAttivi()?"Nessuna scadenza con questi filtri.":"Nessuna spesa ricorrente.<br>Aggiungi una spesa e attiva \"Ricorrente\".")+'</div>')+'</div>';
 }
 
 /* ---------- Entrate ---------- */

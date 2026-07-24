@@ -23,12 +23,12 @@
 <header>
   <div class="hwrap">
     <h1 id="app-title">Registro Spese</h1>
-    <button class="iconcircle" id="btn-scan" title="Scansiona una spesa"></button>
   </div>
 </header>
 
 <main id="main"></main>
 
+<button class="fab fab-2" id="btn-scan" title="Scansiona una spesa"></button>
 <button class="fab" id="btn-add" title="Aggiungi spesa"></button>
 <nav><div class="tabs" id="tabs"></div></nav>
 <input type="file" id="scan-input" accept="image/*" style="display:none">
@@ -266,6 +266,48 @@
     <div class="frow" style="margin-top:8px">
       <button class="btn btn-ghost" style="flex:1" id="txmove-cancel">Annulla</button>
       <button class="btn btn-primary" style="flex:2" id="txmove-save">Registra</button>
+    </div>
+  </div>
+</div>
+
+<!-- filtri spese -->
+<div class="overlay" id="fsp-overlay">
+  <div class="sheet">
+    <div class="grab"></div>
+    <h2>Filtra le spese</h2>
+    <div class="mb"><label class="label">Ordina per</label>
+      <div class="chips" id="fsp-sort"></div></div>
+    <div class="mb"><label class="label">Tipo</label>
+      <div class="chips" id="fsp-type"></div></div>
+    <div class="mb"><label class="label">Periodo</label>
+      <div class="chips" id="fsp-period"></div></div>
+    <div class="frow mb" id="fsp-dates" style="display:none">
+      <div style="flex:1"><label class="label">Dal</label>
+        <input class="input" id="fsp-from" type="date"></div>
+      <div style="flex:1"><label class="label">Al</label>
+        <input class="input" id="fsp-to" type="date"></div>
+    </div>
+    <div class="frow" style="margin-top:8px">
+      <button class="btn btn-ghost" style="flex:1" data-act="spese-reset">Azzera</button>
+      <button class="btn btn-primary" style="flex:2" id="fsp-close">Fatto</button>
+    </div>
+  </div>
+</div>
+
+<!-- filtri scadenze -->
+<div class="overlay" id="fsc-overlay">
+  <div class="sheet">
+    <div class="grab"></div>
+    <h2>Filtra le scadenze</h2>
+    <div class="mb"><label class="label">Orizzonte</label>
+      <div class="chips" id="fsc-range"></div></div>
+    <div class="mb"><label class="label">Categoria</label>
+      <div class="chips scroll" id="fsc-cat"></div></div>
+    <div class="mb"><label class="label">Ordina per</label>
+      <div class="chips" id="fsc-sort"></div></div>
+    <div class="frow" style="margin-top:8px">
+      <button class="btn btn-ghost" style="flex:1" data-act="scad-reset">Azzera</button>
+      <button class="btn btn-primary" style="flex:2" id="fsc-close">Fatto</button>
     </div>
   </div>
 </div>

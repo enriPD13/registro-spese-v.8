@@ -17,6 +17,7 @@ function icon(n,s){
     "sliders":'<path d="M4 7h10M18 7h2M4 12h4M12 12h8M4 17h13M21 17h-1"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="19" cy="17" r="2"/>',
     "euro":'<path d="M17 6.5A6.5 6.5 0 0 0 6.6 12 6.5 6.5 0 0 0 17 17.5M4 10.3h8M4 13.7h8"/>',
     "piggy":'<path d="M4 12.5c0-3 2.7-5 6-5 1 0 1.9.2 2.7.5L16 6.5l-.4 3c1 .8 1.7 1.9 1.9 3.2h1.6v3.2h-1.9c-.5.9-1.3 1.6-2.2 2v1.6h-2.4v-1h-2.8v1H7.4v-1.6C5.4 18.3 4 15.6 4 12.5z"/><circle cx="8.5" cy="12" r=".9" fill="currentColor" stroke="none"/>',
+    "filter":'<path d="M4 5.5h16l-6.3 7.4v5.1l-3.4 1.8v-6.9z"/>',
     "search":'<circle cx="11" cy="11" r="7"/><path d="M20 20l-3.9-3.9"/>',
     "trend-up":'<path d="M3.5 17.5L10 11l4 4 6.5-6.5M15 8.5h5.5V14"/>',
     "trend-down":'<path d="M3.5 8.5L10 15l4-4 6.5 6.5M15 17.5h5.5V12"/>',
@@ -28,21 +29,37 @@ function icon(n,s){
 }
 function mountStaticIcons(){
   document.querySelectorAll("[data-ic]").forEach(el=>{el.innerHTML=icon(el.dataset.ic);});
-  paintHeaderButton();
+  paintFloatingButtons();
   document.getElementById("btn-add").innerHTML=icon("plus",26);
 }
 /* Il pulsante in alto a destra cambia con la scheda: ingranaggio in
    "Tariffe e agenda", freccia di ritorno nelle sue impostazioni, altrove fotocamera. */
-function paintHeaderButton(){
+/* I due pulsanti fluttuanti: il "+" solo nel Riepilogo, il secondo cambia
+   funzione con la scheda e sparisce nel Calendario. */
+function paintFloatingButtons(){
   const hb=document.getElementById("btn-scan");
+  const add=document.getElementById("btn-add");
+  if(add)add.style.display=(S.tab==="riepilogo")?"flex":"none";
   if(!hb)return;
-  if(S.tab==="tariffe"){hb.innerHTML=icon("sliders");hb.title="Impostazioni agenda";}
-  else if(S.tab==="agenda-config"){hb.innerHTML=icon("chev-l");hb.title="Torna a Tariffe e agenda";}
-  else{hb.innerHTML=icon("camera");hb.title="Scansiona una spesa";}
+  let ic=null,tit="",dot=false;
+  if(S.tab==="calendario"){ic=null;}
+  else if(S.tab==="spese"||S.tab==="scadenze"){
+    ic="filter";tit="Filtri";
+    dot=(S.tab==="spese")?speseFiltriAttivi():scadenzeFiltriAttivi();
+  }
+  else if(S.tab==="tariffe"){ic="sliders";tit="Impostazioni agenda";}
+  else if(S.tab==="agenda-config"){ic="chev-l";tit="Torna a Tariffe e agenda";}
+  else{ic="camera";tit="Scansiona una spesa";}
+  if(!ic){hb.style.display="none";return;}
+  hb.style.display="flex";
+  hb.innerHTML=icon(ic);
+  hb.title=tit;
+  hb.classList.toggle("up",S.tab==="riepilogo");   // sopra al + quando c'è anche quello
+  hb.classList.toggle("has-dot",!!dot);
 }
 
 /* ================= CONSTANTS ================= */
-const APP_V="8.13";
+const APP_V="8.15";
 const FREQS=[
   {id:"mensile",label:"Mensile",months:1},
   {id:"bimestrale",label:"Bimestrale",months:2},
@@ -95,7 +112,9 @@ const S={
   expenses:[],categories:DEFAULT_CATS.slice(),apiKey:"",
   tab:"riepilogo",viewY:now.getFullYear(),viewM:now.getMonth(),
   calY:now.getFullYear(),calM:now.getMonth(),selDay:null,
-  filterCat:"all",calFilter:"all",chartRange:6,search:"",busy:"",fcMode:"mesi",fcYear:null,fcCeiling:null,rates:[],calEvents:[],calList:[],calIgnored:[],calOverrides:{},calSkipWords:"compleanno",calLastSync:0,calDayHours:8,calBreakStart:"13:00",calBreakEnd:"14:00",calMaxHours:8,agY:null,agM:null,agSelDay:null,editId:null,notice:"",error:"",
+  filterCat:"all",calFilter:"all",chartRange:6,search:"",busy:"",
+  expSort:"data-desc",expType:"all",expPeriod:"sempre",expFrom:"",expTo:"",
+  scadRange:0,scadCat:"all",scadSort:"data",fcMode:"mesi",fcYear:null,fcCeiling:null,rates:[],calEvents:[],calList:[],calIgnored:[],calOverrides:{},calSkipWords:"compleanno",calLastSync:0,calDayHours:8,calBreakStart:"13:00",calBreakEnd:"14:00",calMaxHours:8,agY:null,agM:null,agSelDay:null,editId:null,notice:"",error:"",
   templates:[],gClientId:"",lastSync:0,savedAt:0,
   incomes:[],lastInvoiceSync:0,incCategories:DEFAULT_INC_CATS.slice(),
   goals:[],taxRate:30,taxSaved:[],
@@ -158,7 +177,7 @@ function snapshotPayload(){
 }
 async function persistLocal(){
   const ok=await store.save({expenses:S.expenses,categories:S.categories,apiKey:S.apiKey,
-    templates:S.templates,gClientId:S.gClientId,lastSync:S.lastSync,savedAt:S.savedAt,incomes:S.incomes,lastInvoiceSync:S.lastInvoiceSync,incCategories:S.incCategories,goals:S.goals,taxRate:S.taxRate,taxSaved:S.taxSaved,fcCeiling:S.fcCeiling,rates:S.rates,calDayHours:S.calDayHours,calBreakStart:S.calBreakStart,calBreakEnd:S.calBreakEnd,calMaxHours:S.calMaxHours,calEvents:S.calEvents,calList:S.calList,calIgnored:S.calIgnored,calOverrides:S.calOverrides,calSkipWords:S.calSkipWords,calLastSync:S.calLastSync});
+    templates:S.templates,gClientId:S.gClientId,lastSync:S.lastSync,savedAt:S.savedAt,incomes:S.incomes,lastInvoiceSync:S.lastInvoiceSync,incCategories:S.incCategories,expSort:S.expSort,expType:S.expType,expPeriod:S.expPeriod,expFrom:S.expFrom,expTo:S.expTo,scadRange:S.scadRange,scadCat:S.scadCat,scadSort:S.scadSort,goals:S.goals,taxRate:S.taxRate,taxSaved:S.taxSaved,fcCeiling:S.fcCeiling,rates:S.rates,calDayHours:S.calDayHours,calBreakStart:S.calBreakStart,calBreakEnd:S.calBreakEnd,calMaxHours:S.calMaxHours,calEvents:S.calEvents,calList:S.calList,calIgnored:S.calIgnored,calOverrides:S.calOverrides,calSkipWords:S.calSkipWords,calLastSync:S.calLastSync});
   if(!ok&&store.mode!=="none"){S.error="Salvataggio non riuscito: i dati restano in memoria per questa sessione.";}
   if(ok&&store.mode==="local")snapshots.save(snapshotPayload());
 }

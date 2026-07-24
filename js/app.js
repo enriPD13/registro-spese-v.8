@@ -22,6 +22,8 @@
     if(Array.isArray(data.calEvents))S.calEvents=data.calEvents;
     if(Array.isArray(data.calList))S.calList=data.calList;
     if(Array.isArray(data.calIgnored))S.calIgnored=data.calIgnored;
+    ["expSort","expType","expPeriod","expFrom","expTo","scadCat","scadSort"].forEach(k=>{if(data[k]!=null)S[k]=data[k];});
+    if(data.scadRange!=null)S.scadRange=Number(data.scadRange)||0;
     if(data.calOverrides&&typeof data.calOverrides==="object")S.calOverrides=data.calOverrides;
     if(data.calSkipWords!=null)S.calSkipWords=data.calSkipWords;
     if(data.calLastSync)S.calLastSync=data.calLastSync;
