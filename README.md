@@ -194,8 +194,9 @@ L'intestazione contiene solo il titolo della scheda. In basso a destra ci sono a
 massimo due pulsanti circolari verdi: il "+" per aggiungere una spesa, presente solo
 nel Riepilogo, e un secondo pulsante che cambia funzione con la scheda - fotocamera
 per scansionare uno scontrino, imbuto per i filtri in Spese e Scadenze, ingranaggio
-in Tariffe e agenda, freccia di ritorno nelle sue impostazioni. Nel Calendario non
-compare alcun pulsante. Quando ci sono entrambi, il secondo si posiziona sopra al
+in Tariffe e agenda, freccia di ritorno nelle sue impostazioni. Non compare alcun pulsante in Calendario,
+Previsioni, Risparmi, Entrate, Categorie spese, Categorie entrate e Impostazioni:
+quelle schede hanno gia' i propri comandi nel contenuto. Quando ci sono entrambi, il secondo si posiziona sopra al
 "+"; alla pressione torna chiaro, come i vecchi tasti in alto.
 
 ## Requisiti

@@ -34,15 +34,18 @@ function mountStaticIcons(){
 }
 /* Il pulsante in alto a destra cambia con la scheda: ingranaggio in
    "Tariffe e agenda", freccia di ritorno nelle sue impostazioni, altrove fotocamera. */
+/* Schede senza alcun pulsante fluttuante: hanno già i propri comandi nel contenuto. */
+const SENZA_FAB=["calendario","previsioni","risparmi","entrate","categorie","cat-entrate","impostazioni"];
+
 /* I due pulsanti fluttuanti: il "+" solo nel Riepilogo, il secondo cambia
-   funzione con la scheda e sparisce nel Calendario. */
+   funzione con la scheda e sparisce dove non serve. */
 function paintFloatingButtons(){
   const hb=document.getElementById("btn-scan");
   const add=document.getElementById("btn-add");
   if(add)add.style.display=(S.tab==="riepilogo")?"flex":"none";
   if(!hb)return;
   let ic=null,tit="",dot=false;
-  if(S.tab==="calendario"){ic=null;}
+  if(SENZA_FAB.indexOf(S.tab)>=0){ic=null;}
   else if(S.tab==="spese"||S.tab==="scadenze"){
     ic="filter";tit="Filtri";
     dot=(S.tab==="spese")?speseFiltriAttivi():scadenzeFiltriAttivi();
@@ -59,7 +62,7 @@ function paintFloatingButtons(){
 }
 
 /* ================= CONSTANTS ================= */
-const APP_V="8.15";
+const APP_V="8.16";
 const FREQS=[
   {id:"mensile",label:"Mensile",months:1},
   {id:"bimestrale",label:"Bimestrale",months:2},
