@@ -24,6 +24,7 @@ js/
   charts.js               grafici del Riepilogo
   forecast.js             previsioni di cassa (profilo stagionale, proiezioni)
   calendar.js             agenda Google, tariffe orarie, incasso gia' impegnato
+  fisco.js                prospetto rateizzazione, scadenze fiscali, proiezione
   render.js               disegno di tutte le schermate
   forms.js                moduli: spese, categorie, modelli, bollette
   scan.js                 scansione scontrini con IA
@@ -166,6 +167,25 @@ Per attivarla: abilitare l'API Google Calendar sul progetto Cloud, ri-autorizzar
 l'accesso dall'app (viene chiesto il permesso di sola lettura del calendario) e, se
 si usa il calendario Apple, sincronizzarlo con l'account Google dalle impostazioni
 dell'iPhone.
+
+**Fisco** - legge il PDF del prospetto di rateizzazione della commercialista e ne
+ricava le scadenze con date, importi e codici tributo, classificandoli per natura
+(contributi INPS, imposta sostitutiva, IRPEF, addizionale, interessi). Le scadenze
+si possono segnare come pagate, correggere o inserire a mano nel formato
+"codice | anno | rata | importo". Ogni scadenza viene confrontata col totale
+dichiarato nel documento: se non quadra, l'app lo segnala.
+
+Dal prospetto la sezione ricava due cose che l'app non poteva sapere. La prima e'
+l'aliquota reale: dividendo quanto risulta dovuto per quanto e' stato incassato si
+ottiene la percentuale effettiva per tipo di reddito (compensi da fattura contro
+altri redditi), applicabile con un tocco alla categoria entrata corrispondente al
+posto di una stima. La seconda e' la proiezione dell'anno successivo: gli acconti non
+sono una previsione ma una funzione dell'anno precedente, quindi si calcolano; varia
+solo il saldo, che dipende dall'incasso finale ed e' pesato sui compensi previsti.
+Le percentuali di acconto usate (80% contributi, 100% imposta) sono modificabili.
+
+Le scadenze fiscali compaiono anche nello scadenzario e vengono sommate alle uscite
+nella previsione di cassa, dove sono importi certi e datati.
 
 **Scansione IA** — fotografa uno scontrino e l'app ne estrae importo, data e
 categoria (richiede una chiave API Groq gratuita, salvata solo sul dispositivo).

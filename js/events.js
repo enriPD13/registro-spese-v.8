@@ -98,6 +98,12 @@ document.addEventListener("click",ev=>{
   }
   else if(act==="filter"){S.filterCat=t.dataset.id;render();}
   else if(act==="search-clear"){S.search="";render();}
+  else if(act==="fisco-import"){document.getElementById("fisco-input").click();}
+  else if(act==="fisco-new"){openFiscoScad(null);}
+  else if(act==="fisco-pay"){fiscoTogglePagata(t.dataset.id);}
+  else if(act==="fisco-detail"){openFiscoDetail(t.dataset.id);}
+  else if(act==="fisco-clear"){fiscoAzzera();}
+  else if(act==="fisco-apply-rate"){fiscoApplicaAliquota(t.dataset.p,t.dataset.t||"");}
   else if(act==="fsp-sort"){S.expSort=t.dataset.id;persist();paintFiltriSpese();render();}
   else if(act==="fsp-type"){S.expType=t.dataset.id;persist();paintFiltriSpese();render();}
   else if(act==="fsp-period"){S.expPeriod=t.dataset.id;persist();paintFiltriSpese();render();}
@@ -307,6 +313,20 @@ document.getElementById("fsp-from").addEventListener("change",ev=>{S.expFrom=ev.
 document.getElementById("fsp-to").addEventListener("change",ev=>{S.expTo=ev.target.value;persist();render();});
 document.getElementById("fsc-close").addEventListener("click",closeFiltriScadenze);
 document.getElementById("fsc-overlay").addEventListener("click",ev=>{if(ev.target.id==="fsc-overlay")closeFiltriScadenze();});
+document.getElementById("fisco-input").addEventListener("change",ev=>{
+  const f=ev.target.files&&ev.target.files[0];
+  ev.target.value="";
+  if(f)fiscoImportPdf(f);
+});
+document.getElementById("fis-cancel").addEventListener("click",closeFiscoScad);
+document.getElementById("fis-save").addEventListener("click",saveFiscoScad);
+document.getElementById("fis-del").addEventListener("click",deleteFiscoScad);
+document.getElementById("fis-overlay").addEventListener("click",ev=>{if(ev.target.id==="fis-overlay")closeFiscoScad();});
+document.getElementById("fdet-close").addEventListener("click",closeFiscoDetail);
+document.getElementById("fdet-edit").addEventListener("click",ev=>{
+  const d=ev.currentTarget.dataset.id;closeFiscoDetail();openFiscoScad(d);
+});
+document.getElementById("fdet-overlay").addEventListener("click",ev=>{if(ev.target.id==="fdet-overlay")closeFiscoDetail();});
 document.getElementById("act-cancel").addEventListener("click",closeAct);
 document.getElementById("act-save").addEventListener("click",saveAct);
 document.getElementById("act-reset").addEventListener("click",resetAct);
@@ -350,6 +370,7 @@ function afterRender(){
   if(S.tab==="riepilogo"){drawCharts();animateTotal();}
   if(S.tab==="entrate")drawIncomeCharts();
   if(S.tab==="tariffe")drawAgendaDonut();
+  if(S.tab==="fisco")drawFiscoDonut();
   if(S.tab==="previsioni"){
     if((S.fcMode||"mesi")==="mesi")drawForecastChart();
     else drawForecastYearsChart();

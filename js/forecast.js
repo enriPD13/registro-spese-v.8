@@ -263,8 +263,13 @@ function forecastMonths(){
     const income=past?(monthIncomes(y,m).reduce((s,i)=>s+(Number(i.amount)||0),0)):(invoice+recIn+other);
     const expRec=recurringExpenseFor(y,m);
     const expOne=past?0:oneOffAvg;
-    const expense=past?(monthExpenses(y,m).reduce((s,e)=>s+(amountFor(e,y,m).val||0),0)):(expRec+expOne);
-    rows.push({y,m,past,invoice,stat,comm,recIn,other,income,expense,net:income-expense});
+    /* scadenze fiscali del mese: sono uscite certe, con data e importo noti */
+    const fisc=(!past&&typeof fiscoScadenze==="function")
+      ? fiscoScadenze().filter(s=>!s.pagata&&s.date.slice(0,7)===y+"-"+String(m+1).padStart(2,"0"))
+          .reduce((a,s)=>a+s.voci.reduce((x,v)=>x+v.importo,0),0)
+      : 0;
+    const expense=past?(monthExpenses(y,m).reduce((s,e)=>s+(amountFor(e,y,m).val||0),0)):(expRec+expOne+fisc);
+    rows.push({y,m,past,invoice,stat,comm,recIn,other,income,expense,fisc,net:income-expense});
   }
   let cum=0;
   rows.forEach(r=>{cum+=r.net;r.cum=cum;});
@@ -370,6 +375,9 @@ function fcMonthsView(){
           '<div style="height:100%;width:'+we+'%;background:#D9836B;border-radius:99px"></div></div>'+
         '<span class="small" style="width:64px;text-align:right;font-variant-numeric:tabular-nums">'+eurShort(r.expense)+'</span>'+
       '</div>'+
+      (r.fisc>0?'<div class="small" style="margin-top:6px;display:flex;align-items:center;gap:6px">'+
+        '<span style="color:#C46A4E;display:flex">'+icon("doc",14)+'</span>'+
+        'di cui <b>'+eur(r.fisc)+'</b> di scadenze fiscali</div>':"")+
       (r.comm&&r.comm.total>0?'<div class="small" style="margin-top:6px;display:flex;align-items:center;gap:6px">'+
         '<span style="color:var(--accent-text);display:flex">'+icon("cal",14)+'</span>'+
         'già in agenda <b>'+eur(r.comm.total)+'</b> ('+

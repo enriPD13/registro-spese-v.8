@@ -39,6 +39,7 @@
     <div class="grab"></div>
     <div class="menu-row" data-act="go" data-id="tariffe"><span class="menu-ic" data-ic="clock"></span><div style="flex:1">Tariffe e agenda<div class="small">Compensi orari e impegni da Google Calendar</div></div><span data-ic="chev-r" style="color:var(--muted)"></span></div>
     <div class="menu-row" data-act="go" data-id="previsioni"><span class="menu-ic" data-ic="trend-up"></span><div style="flex:1">Previsioni<div class="small">Stima di cassa sui tuoi incassi storici</div></div><span data-ic="chev-r" style="color:var(--muted)"></span></div>
+    <div class="menu-row" data-act="go" data-id="fisco"><span class="menu-ic" data-ic="doc"></span><div style="flex:1">Fisco<div class="small">Scadenze del prospetto e proiezione</div></div><span data-ic="chev-r" style="color:var(--muted)"></span></div>
     <div class="menu-row" data-act="go" data-id="risparmi"><span class="menu-ic" data-ic="piggy"></span><div style="flex:1">Risparmi<div class="small">Accantonamento fiscale e obiettivi</div></div><span data-ic="chev-r" style="color:var(--muted)"></span></div>
     <div class="menu-row" data-act="go" data-id="entrate"><span class="menu-ic" data-ic="euro"></span><div style="flex:1">Entrate<div class="small">Guadagni, import da Excel fatture</div></div><span data-ic="chev-r" style="color:var(--muted)"></span></div>
     <div class="menu-row" data-act="go" data-id="categorie"><span class="menu-ic" data-ic="tag"></span><div style="flex:1">Categorie spese<div class="small">Nomi, colori, nuove etichette</div></div><span data-ic="chev-r" style="color:var(--muted)"></span></div>
@@ -270,6 +271,41 @@
   </div>
 </div>
 
+<input type="file" id="fisco-input" accept="application/pdf,.pdf" style="display:none">
+
+<!-- scadenza fiscale -->
+<div class="overlay" id="fis-overlay">
+  <div class="sheet">
+    <div class="grab"></div>
+    <h2 id="fis-title">Nuova scadenza</h2>
+    <div class="mb"><label class="label">Data</label>
+      <input class="input" id="fis-date" type="date"></div>
+    <div class="mb"><label class="label">Voci</label>
+      <textarea class="input" id="fis-voci" rows="6" style="font-family:ui-monospace,monospace;font-size:13px"
+        placeholder="1790 | 2026 | 1 | 201,72&#10;PXXR | 2026 | 1 | 497,64"></textarea>
+      <div class="small" style="margin-top:5px">Una voce per riga: <b>codice | anno | rata | importo</b>. La rata può restare vuota.</div></div>
+    <button class="btn btn-ghost" id="fis-del" style="width:100%;margin-bottom:10px;display:none">Elimina scadenza</button>
+    <div class="frow">
+      <button class="btn btn-ghost" style="flex:1" id="fis-cancel">Annulla</button>
+      <button class="btn btn-primary" style="flex:2" id="fis-save">Salva</button>
+    </div>
+  </div>
+</div>
+
+<!-- dettaglio scadenza -->
+<div class="overlay" id="fdet-overlay">
+  <div class="sheet">
+    <div class="grab"></div>
+    <h2 id="fdet-title">Scadenza</h2>
+    <div class="small" id="fdet-sub" style="margin-bottom:12px"></div>
+    <div id="fdet-body" style="max-height:46vh;overflow:auto"></div>
+    <div class="frow" style="margin-top:12px">
+      <button class="btn btn-ghost" style="flex:1" id="fdet-edit">Modifica</button>
+      <button class="btn btn-primary" style="flex:1" id="fdet-close">Chiudi</button>
+    </div>
+  </div>
+</div>
+
 <!-- filtri spese -->
 <div class="overlay" id="fsp-overlay">
   <div class="sheet">
@@ -409,6 +445,7 @@
 <script src="js/drive.js"></script>
 <script src="js/charts.js"></script>
 <script src="js/calendar.js"></script>
+<script src="js/fisco.js"></script>
 <script src="js/forecast.js"></script>
 <script src="js/render.js"></script>
 <script src="js/forms.js"></script>

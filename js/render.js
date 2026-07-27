@@ -1,7 +1,7 @@
 /* ================= RENDER ================= */
 const TAB_TITLES={
   riepilogo:"Riepilogo",calendario:"Calendario",spese:"Spese",scadenze:"Scadenze",
-  entrate:"Entrate",risparmi:"Risparmi",previsioni:"Previsioni",tariffe:"Tariffe e agenda","agenda-config":"Impostazioni agenda",categorie:"Categorie spese",
+  entrate:"Entrate",risparmi:"Risparmi",previsioni:"Previsioni",tariffe:"Tariffe e agenda","agenda-config":"Impostazioni agenda",fisco:"Fisco",categorie:"Categorie spese",
   "cat-entrate":"Categorie entrate",impostazioni:"Impostazioni",
 };
 function render(){
@@ -12,7 +12,7 @@ function render(){
   renderTabs();
   const fn={riepilogo:renderRiepilogo,calendario:renderCalendario,spese:renderSpese,
     scadenze:renderScadenze,categorie:renderCategorie,impostazioni:renderImpostazioni,
-    entrate:renderEntrate,"cat-entrate":renderCatEntrate,risparmi:renderRisparmi,previsioni:renderPrevisioni,tariffe:renderTariffe,"agenda-config":renderAgendaConfig}[S.tab];
+    entrate:renderEntrate,"cat-entrate":renderCatEntrate,risparmi:renderRisparmi,previsioni:renderPrevisioni,tariffe:renderTariffe,"agenda-config":renderAgendaConfig,fisco:renderFisco}[S.tab];
   document.getElementById("main").innerHTML='<div class="view">'+banners()+fn()+'</div>';
   afterRender();
 }
@@ -27,7 +27,7 @@ function banners(){
 }
 function renderTabs(){
   const urgent=S.expenses.filter(e=>e.recurring&&daysTo(nextDue(e))<=7).length;
-  const inAltro=S.tab==="categorie"||S.tab==="impostazioni"||S.tab==="entrate"||S.tab==="cat-entrate"||S.tab==="risparmi"||S.tab==="previsioni"||S.tab==="tariffe"||S.tab==="agenda-config";
+  const inAltro=S.tab==="categorie"||S.tab==="impostazioni"||S.tab==="entrate"||S.tab==="cat-entrate"||S.tab==="risparmi"||S.tab==="previsioni"||S.tab==="tariffe"||S.tab==="agenda-config"||S.tab==="fisco";
   const tabs=[
     ["riepilogo","Riepilogo","pie"],
     ["calendario","Calendario","cal"],
@@ -333,6 +333,31 @@ function scadenzeFiltrate(){
   return up;
 }
 const RANGE_LABEL={0:"Tutte le scadenze",7:"Prossimi 7 giorni",30:"Prossimi 30 giorni",90:"Prossimi 90 giorni"};
+/* Le scadenze fiscali entrano nello scadenzario: sono le uscite più pesanti
+   dell'anno e non devono restare confinate nella sezione Fisco. */
+function renderScadenzeFiscali(){
+  if(typeof fiscoProssime!=="function")return "";
+  const p=fiscoProssime();
+  if(!p.length)return "";
+  const tot=p.reduce((a,s)=>a+s.voci.reduce((x,v)=>x+v.importo,0),0);
+  return '<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">'+
+    '<span class="label" style="margin:0">Scadenze fiscali</span>'+
+    '<button class="btn btn-ghost" style="padding:6px 12px;font-size:12.5px" data-act="go" data-id="fisco">Dettaglio</button></div>'+
+    p.slice(0,4).map(s=>{
+      const t=s.voci.reduce((a,v)=>a+v.importo,0);
+      const gg=daysTo(new Date(s.date+"T00:00:00"));
+      const urg=gg<=15;
+      return '<div class="row"><span class="dot" style="background:'+(urg?"#C46A4E":"var(--accent)")+'"></span>'+
+        '<div class="rdesc"><div class="rtitle">'+fmtData(s.date)+
+          (urg?'<span class="rtag tag-rec">tra '+gg+' gg</span>':'')+'</div>'+
+        '<div class="rmeta">'+s.voci.length+(s.voci.length===1?" voce":" voci")+'</div></div>'+
+        '<div class="ramount">'+eur(t)+'</div></div>';
+    }).join("")+
+    (p.length>4?'<div class="small" style="padding-top:8px">e altre '+(p.length-4)+' · totale rimanente <b>'+eur(tot)+'</b></div>'
+      :'<div class="small" style="padding-top:8px">Totale rimanente <b>'+eur(tot)+'</b></div>')+
+  '</div>';
+}
+
 function renderScadenze(){
   const up=scadenzeFiltrate();
   const testa=scadenzeFiltriAttivi()?`<div class="card" style="padding:11px 14px;margin-bottom:12px">
@@ -344,7 +369,7 @@ function renderScadenze(){
       <button class="btn btn-ghost" style="padding:6px 12px;font-size:12.5px" data-act="scad-reset">Azzera</button>
     </div>
   </div>`:"";
-  return testa+'<div class="card"><span class="label">Prossime scadenze ricorrenti</span>'+
+  return testa+renderScadenzeFiscali()+'<div class="card"><span class="label">Prossime scadenze ricorrenti</span>'+
   (up.length?up.map(e=>{
     const d=daysTo(e.due);const urg=d<=7;
     const f=FREQS.find(x=>x.id===e.freq);

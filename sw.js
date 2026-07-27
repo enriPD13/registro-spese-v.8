@@ -1,7 +1,7 @@
 /* Registro Spese v8 — service worker
    Strategia: app shell in cache (network-first sui file dell'app per avere
    sempre l'ultima versione), chiamate API sempre in rete. */
-const CACHE = "registro-spese-v8.16.0";
+const CACHE = "registro-spese-v8.17.0";
 
 const SHELL = [
   "./",
@@ -16,6 +16,7 @@ const SHELL = [
   "./js/drive.js",
   "./js/charts.js",
   "./js/calendar.js",
+  "./js/fisco.js",
   "./js/forecast.js",
   "./js/render.js",
   "./js/forms.js",
