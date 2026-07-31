@@ -26,7 +26,7 @@ function banners(){
   return h;
 }
 function renderTabs(){
-  const urgent=S.expenses.filter(e=>e.recurring&&daysTo(nextDue(e))<=7).length;
+  const urgent=S.expenses.filter(e=>{const d=e.recurring?nextDue(e):null;return d&&daysTo(d)<=7;}).length;
   const inAltro=S.tab==="categorie"||S.tab==="impostazioni"||S.tab==="entrate"||S.tab==="cat-entrate"||S.tab==="risparmi"||S.tab==="previsioni"||S.tab==="tariffe"||S.tab==="agenda-config"||S.tab==="fisco";
   const tabs=[
     ["riepilogo","Riepilogo","pie"],
@@ -142,7 +142,7 @@ function buildInsights(){
     else out.push({ic:"piggy",tone:"good",txt:"Fondo tasse "+y+" completo: hai accantonato tutto il previsto."});
   }
   // scadenze imminenti
-  const soon=S.expenses.filter(e=>e.recurring&&daysTo(nextDue(e))<=7).length;
+  const soon=S.expenses.filter(e=>{const d=e.recurring?nextDue(e):null;return d&&daysTo(d)<=7;}).length;
   if(soon>0)out.push({ic:"clock",tone:"warn",txt:"<b>"+soon+"</b> "+(soon===1?"scadenza":"scadenze")+" nei prossimi 7 giorni."});
   return out.slice(0,4);
 }
@@ -231,8 +231,10 @@ function expenseRow(e,y,m){
     '<div class="rdesc">'+
       '<div class="rtitle">'+esc(e.desc)+
         (e.recurring?'<span class="rtag tag-rec">'+(f?f.label:"Ricorrente")+'</span>':"")+
-        (e.variable?'<span class="rtag tag-var">Variabile</span>':"")+'</div>'+
-      '<div class="rmeta">'+esc(c.name)+' · '+new Date(e.date+"T00:00:00").toLocaleDateString("it-IT")+'</div>'+
+        (e.variable?'<span class="rtag tag-var">Variabile</span>':"")+
+        (rateTot(e)&&expFinita(e)?'<span class="rtag tag-var">conclusa</span>':"")+'</div>'+
+      '<div class="rmeta">'+esc(c.name)+' · '+new Date(e.date+"T00:00:00").toLocaleDateString("it-IT")+
+        (rateTot(e)?' · rata '+Math.min(rateFatte(e),rateTot(e))+' di '+rateTot(e):"")+'</div>'+
     '</div>'+
     '<div class="ramount">'+amountLabel(e,y,m)+'</div>'+
     '<button class="iconbtn" aria-label="Modifica spesa" data-act="edit" data-id="'+e.id+'">'+icon("pencil",18)+'</button>'+
@@ -324,7 +326,8 @@ function scadenzeFiltriAttivi(){
   return (S.scadRange&&S.scadRange>0)||(S.scadCat&&S.scadCat!=="all")||(S.scadSort&&S.scadSort!=="data");
 }
 function scadenzeFiltrate(){
-  let up=S.expenses.filter(e=>e.recurring).map(e=>({...e,due:nextDue(e)}));
+  let up=S.expenses.filter(e=>e.recurring).map(e=>({...e,due:nextDue(e)}))
+    .filter(e=>e.due);        // le rateizzazioni concluse escono dallo scadenzario
   if(S.scadCat&&S.scadCat!=="all")up=up.filter(e=>e.categoryId===S.scadCat);
   if(S.scadRange>0)up=up.filter(e=>daysTo(e.due)<=S.scadRange);
   up.sort((a,b)=>S.scadSort==="importo"
@@ -358,6 +361,38 @@ function renderScadenzeFiscali(){
   '</div>';
 }
 
+/* Rateizzazioni in corso: quante rate mancano e quanto resta da pagare. */
+function renderRateizzazioni(){
+  const rate=S.expenses.filter(e=>e.recurring&&rateTot(e)&&!expFinita(e));
+  if(!rate.length)return "";
+  const residuoTot=rate.reduce((a,e)=>{
+    const n=rateResidue(e)||0;
+    const imp=Number(e.amount)||0;
+    return a+n*imp;
+  },0);
+  return '<div class="card"><span class="label">Rateizzazioni in corso</span>'+
+    rate.map(e=>{
+      const c=catById(e.categoryId);
+      const fatte=rateFatte(e),tot=rateTot(e),res=rateResidue(e)||0;
+      const pct=tot?Math.round(fatte/tot*100):0;
+      const imp=Number(e.amount)||0;
+      return '<div style="padding:11px 0;border-bottom:1px solid var(--line)">'+
+        '<div style="display:flex;align-items:center;gap:10px;margin-bottom:7px">'+
+          '<span class="dot" style="background:'+c.color+'"></span>'+
+          '<div style="flex:1;font-weight:700;font-size:14px">'+esc(e.desc)+'</div>'+
+          '<span class="small">'+fatte+' di '+tot+'</span>'+
+        '</div>'+
+        '<div style="height:7px;border-radius:99px;background:var(--soft);overflow:hidden;margin-bottom:6px">'+
+          '<div style="height:100%;width:'+pct+'%;background:'+c.color+';border-radius:99px"></div></div>'+
+        '<div class="small">'+(res?'restano <b>'+res+'</b> '+(res===1?"rata":"rate")+
+          (imp?' · <b>'+eur(res*imp)+'</b> da pagare':""):"conclusa")+'</div>'+
+      '</div>';
+    }).join("")+
+    (residuoTot>0?'<div style="display:flex;justify-content:space-between;padding-top:12px;font-size:13px">'+
+      '<span class="small">Totale residuo</span><b style="font-variant-numeric:tabular-nums">'+eur(residuoTot)+'</b></div>':"")+
+  '</div>';
+}
+
 function renderScadenze(){
   const up=scadenzeFiltrate();
   const testa=scadenzeFiltriAttivi()?`<div class="card" style="padding:11px 14px;margin-bottom:12px">
@@ -381,14 +416,15 @@ function renderScadenze(){
       '<div class="rdesc">'+
         '<div class="rtitle">'+esc(e.desc)+'</div>'+
         '<div class="rmeta" style="'+(urg?"color:var(--danger);font-weight:700":"")+'">'+
-          (d===0?"Scade oggi":d===1?"Scade domani":"Tra "+d+" giorni")+' · '+(f?f.label:"")+'</div>'+
+          (d===0?"Scade oggi":d===1?"Scade domani":"Tra "+d+" giorni")+' · '+(f?f.label:"")+
+          (rateTot(e)?' · rata '+(rateFatte(e)+1)+' di '+rateTot(e):"")+'</div>'+
       '</div>'+
       '<div style="text-align:right">'+
         '<div class="ramount">'+amountLabel(e,e.due.getFullYear(),e.due.getMonth())+'</div>'+
         (e.variable?'<button class="chip" data-act="bill" data-id="'+e.id+'" style="margin-top:6px;padding:6px 12px;font-size:12px">Registra</button>':"")+
       '</div>'+
     '</div>';}).join("")
-  :'<div class="empty">'+icon("clock",34)+(scadenzeFiltriAttivi()?"Nessuna scadenza con questi filtri.":"Nessuna spesa ricorrente.<br>Aggiungi una spesa e attiva \"Ricorrente\".")+'</div>')+'</div>';
+  :'<div class="empty">'+icon("clock",34)+(scadenzeFiltriAttivi()?"Nessuna scadenza con questi filtri.":"Nessuna spesa ricorrente.<br>Aggiungi una spesa e attiva \"Ricorrente\".")+'</div>')+'</div>'+renderRateizzazioni();
 }
 
 /* ---------- Entrate ---------- */
@@ -500,7 +536,7 @@ function openInc(id){
   incEditId=id||null;
   document.getElementById("inc-title").textContent=i?"Modifica entrata":"Nuova entrata";
   document.getElementById("i-desc").value=i?i.desc:"";
-  document.getElementById("i-amount").value=i?i.amount:"";
+  document.getElementById("i-amount").value=i?String(i.amount).replace(".",","):"";
   document.getElementById("i-date").value=i?i.date:todayISO();
   const rec=i?!!i.recurring:false, freq=i&&i.freq?i.freq:"mensile";
   document.getElementById("i-rec").checked=rec;

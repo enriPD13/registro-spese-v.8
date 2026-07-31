@@ -64,7 +64,7 @@ function paintFloatingButtons(){
 }
 
 /* ================= CONSTANTS ================= */
-const APP_V="8.17";
+const APP_V="8.19";
 const FREQS=[
   {id:"mensile",label:"Mensile",months:1},
   {id:"bimestrale",label:"Bimestrale",months:2},

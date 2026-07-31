@@ -22,23 +22,67 @@ const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"
 const catById=id=>S.categories.find(c=>c.id===id)||{name:"—",color:"#8B887C",id:"?"};
 const incCatById=id=>S.incCategories.find(c=>c.id===id)||{name:"—",color:"#0FA36B",id:"?"};
 function monthsDiff(a,b){return (b.getFullYear()-a.getFullYear())*12+(b.getMonth()-a.getMonth());}
-function dueInMonth(e,y,m){
+/* Numero di rate previste: 0 significa senza termine. */
+function rateTot(e){const n=Number(e&&e.rateTot);return n>0?Math.floor(n):0;}
+
+/* Quale rata cade nel mese indicato (1 = la prima). 0 se in quel mese non ricorre. */
+function rataNum(e,y,m){
   const st=new Date(e.date+"T00:00:00");
   const d=monthsDiff(new Date(st.getFullYear(),st.getMonth(),1),new Date(y,m,1));
-  if(d<0)return false;
+  if(d<0)return 0;
   const f=FREQS.find(x=>x.id===e.freq);
-  return d%(f?f.months:1)===0;
+  const step=f?f.months:1;
+  return (d%step===0)?(d/step+1):0;
+}
+function dueInMonth(e,y,m){
+  const n=rataNum(e,y,m);
+  if(!n)return false;
+  const tot=rateTot(e);
+  return tot?(n<=tot):true;      // con un termine, si ferma all'ultima rata
+}
+
+/* Data dell'ultima rata, solo per le spese con un termine. */
+function lastDue(e){
+  const tot=rateTot(e);
+  if(!tot)return null;
+  const f=FREQS.find(x=>x.id===e.freq);const step=f?f.months:1;
+  const st=new Date(e.date+"T00:00:00");
+  return new Date(st.getFullYear(),st.getMonth()+step*(tot-1),Math.min(st.getDate(),28));
+}
+/* Rate già scadute e rate ancora da pagare. */
+function rateFatte(e){
+  const tot=rateTot(e);
+  const f=FREQS.find(x=>x.id===e.freq);const step=f?f.months:1;
+  const st=new Date(e.date+"T00:00:00");
+  const oggi=new Date();oggi.setHours(0,0,0,0);
+  let n=monthsDiff(new Date(st.getFullYear(),st.getMonth(),1),
+                   new Date(oggi.getFullYear(),oggi.getMonth(),1))/step;
+  n=Math.floor(n)+1;
+  if(oggi.getDate()<Math.min(st.getDate(),28)&&rataNum(e,oggi.getFullYear(),oggi.getMonth()))n--;
+  n=Math.max(0,n);
+  return tot?Math.min(n,tot):n;
+}
+function rateResidue(e){
+  const tot=rateTot(e);
+  return tot?Math.max(0,tot-rateFatte(e)):null;
+}
+function expFinita(e){
+  const tot=rateTot(e);
+  return tot?rateFatte(e)>=tot:false;
 }
 function dueDayInMonth(e,y,m){
   const st=new Date(e.date+"T00:00:00");
   return Math.min(st.getDate(),new Date(y,m+1,0).getDate());
 }
+/* Prossima scadenza. Restituisce null se la rateizzazione è conclusa. */
 function nextDue(e){
   const f=FREQS.find(x=>x.id===e.freq);const step=f?f.months:1;
   const st=new Date(e.date+"T00:00:00");
   const t=new Date();t.setHours(0,0,0,0);
-  let d=new Date(st);
-  while(d<t){d=new Date(d.getFullYear(),d.getMonth()+step,Math.min(st.getDate(),28));}
+  let d=new Date(st),guard=0;
+  while(d<t&&guard++<2000){d=new Date(d.getFullYear(),d.getMonth()+step,Math.min(st.getDate(),28));}
+  const L=lastDue(e);
+  if(L&&d>L)return null;         // tutte le rate sono state pagate
   return d;
 }
 const daysTo=d=>Math.round((d-new Date().setHours(0,0,0,0))/86400000);

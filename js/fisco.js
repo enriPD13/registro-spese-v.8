@@ -139,13 +139,18 @@ function fiscoAnnoRiferimento(){
   const k=Object.keys(anni).sort((a,b)=>anni[b]-anni[a]);
   return k.length?Number(k[0]):new Date().getFullYear();
 }
-/* scadenze future non ancora saldate */
-function fiscoProssime(){
+/* Tutte le scadenze non ancora saldate, comprese quelle già scadute:
+   una scadenza passata e non pagata resta dovuta. */
+function fiscoDaPagare(){
+  return fiscoScadenze().filter(s=>!s.pagata).sort((a,b)=>a.date<b.date?-1:1);
+}
+function fiscoProssime(){return fiscoDaPagare();}
+function fiscoScadute(){
   const oggi=todayISO();
-  return fiscoScadenze().filter(s=>s.date>=oggi&&!s.pagata).sort((a,b)=>a.date<b.date?-1:1);
+  return fiscoDaPagare().filter(s=>s.date<oggi);
 }
 function fiscoResiduo(){
-  return fiscoProssime().reduce((a,s)=>a+s.voci.reduce((x,v)=>x+v.importo,0),0);
+  return fiscoDaPagare().reduce((a,s)=>a+s.voci.reduce((x,v)=>x+v.importo,0),0);
 }
 /* quanto serve entro una certa data */
 function fiscoDovutoEntro(dataISO){
@@ -296,7 +301,11 @@ function renderFisco(){
     <div class="hero-top"><span class="hero-month">DA VERSARE ${anno}</span></div>
     <div class="hero-total">${eur(residuo)}</div>
     <div class="hero-sub">${pross.length?pross.length+(pross.length===1?" scadenza rimanente":" scadenze rimanenti")+" · totale anno "+eur(tot):"Tutte le scadenze sono state segnate come pagate"}</div>
-    ${next?`<div class="hero-sub" style="margin-top:8px">Prossima: <b>${fmtData(next.date)}</b> · ${eur(next.voci.reduce((a,v)=>a+v.importo,0))}</div>`:""}
+    ${(()=>{const sc=fiscoScadute();
+      if(sc.length)return '<div class="hero-sub" style="margin-top:8px">⚠ <b>'+sc.length+
+        (sc.length===1?" scadenza già passata":" scadenze già passate")+'</b> non ancora segnate come pagate</div>';
+      return next?'<div class="hero-sub" style="margin-top:8px">Prossima: <b>'+fmtData(next.date)+
+        '</b> · '+eur(next.voci.reduce((a,v)=>a+v.importo,0))+'</div>':"";})()}
   </div>
 
   ${residuo>0?`<div class="card">
@@ -329,13 +338,15 @@ function renderFisco(){
     <span class="label">Scadenze</span>
     ${fiscoScadenze().slice().sort((a,b)=>a.date<b.date?-1:1).map(s=>{
       const t=s.voci.reduce((a,v)=>a+v.importo,0);
-      const passata=s.date<todayISO();
+      const scaduta=!s.pagata&&s.date<todayISO();
       const gg=daysTo(new Date(s.date+"T00:00:00"));
       const urgente=!s.pagata&&gg>=0&&gg<=15;
       return '<div class="row"'+(s.pagata?' style="opacity:.5"':'')+'>'+
-        '<span class="dot" style="background:'+(s.pagata?"var(--line)":(urgente?"#C46A4E":"var(--accent)"))+'"></span>'+
+        '<span class="dot" style="background:'+(s.pagata?"var(--line)":((urgente||scaduta)?"#C46A4E":"var(--accent)"))+'"></span>'+
         '<div class="rdesc"><div class="rtitle">'+fmtData(s.date)+
-          (s.pagata?' <span class="rtag tag-var">pagata</span>':(urgente?'<span class="rtag tag-rec">tra '+gg+' gg</span>':''))+'</div>'+
+          (s.pagata?' <span class="rtag tag-var">pagata</span>'
+            :(scaduta?'<span class="rtag tag-rec">scaduta</span>'
+            :(urgente?'<span class="rtag tag-rec">tra '+gg+' gg</span>':'')))+'</div>'+
         '<div class="rmeta">'+s.voci.length+(s.voci.length===1?" voce":" voci")+
           (!s.quadra?' · <span style="color:#C46A4E">non quadra</span>':'')+'</div></div>'+
         '<div class="ramount">'+eur(t)+'</div>'+

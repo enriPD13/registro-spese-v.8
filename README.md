@@ -59,8 +59,12 @@ filtro e' attivo il pulsante mostra un pallino e compare una barra riassuntiva c
 Le stesse logiche valgono per **Scadenze**, dove i filtri sono orizzonte temporale
 (7, 30, 90 giorni), categoria e ordinamento per data o importo.
 
-Voci una tantum e ricorrenti (da mensili ad annuali), categorie con
-colore personalizzabile, spese variabili (bollette) che stimano l'importo futuro
+Voci una tantum e ricorrenti (da mensili ad annuali). Una spesa ricorrente puo'
+avere un termine: indicando il numero di rate (per esempio un elettrodomestico
+pagato in 10 rate) l'app la conteggia solo fino all'ultima e poi smette, mostrando
+l'avanzamento "rata 4 di 10" e, nello scadenzario, quante ne restano e quanto c'e'
+ancora da pagare. Lasciando il campo vuoto la spesa non ha scadenza.
+Categorie con colore personalizzabile, spese variabili (bollette) che stimano l'importo futuro
 sullo storico, catalogo di voci suggerite, ricerca per nome/categoria/importo.
 
 **Entrate** — inserimento manuale (anche ricorrente) e importazione automatica
@@ -218,6 +222,15 @@ in Tariffe e agenda, freccia di ritorno nelle sue impostazioni. Non compare alcu
 Previsioni, Risparmi, Entrate, Categorie spese, Categorie entrate e Impostazioni:
 quelle schede hanno gia' i propri comandi nel contenuto. Quando ci sono entrambi, il secondo si posiziona sopra al
 "+"; alla pressione torna chiaro, come i vecchi tasti in alto.
+
+## Nota sui campi importo
+
+I campi che accettano decimali sono `type="text"` con `inputmode="decimal"`, non
+`type="number"`. Non e' una svista: per specifica HTML un campo numerico rifiuta i
+valori con la virgola e restituisce una stringa vuota, quindi su tastiera italiana
+l'importo andrebbe perso prima ancora di essere convertito. Con il campo di testo la
+virgola arriva intatta a `euroNum()`, che interpreta sia "12,50" sia "1.234,56" sia
+"1250", e il tastierino numerico su mobile resta quello giusto.
 
 ## Requisiti
 

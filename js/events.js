@@ -118,7 +118,7 @@ document.addEventListener("click",ev=>{
     S.scadRange=0;S.scadCat="all";S.scadSort="data";
     persist();paintFiltriScadenze();render();
   }
-  else if(act==="edit"){const e=S.expenses.find(x=>x.id===t.dataset.id);if(e){S.editId=e.id;openForm({...e,amount:e.amount!=null?String(e.amount):"",freq:e.freq||"mensile"});}}
+  else if(act==="edit"){const e=S.expenses.find(x=>x.id===t.dataset.id);if(e){S.editId=e.id;openForm({...e,amount:e.amount!=null?String(e.amount).replace(".",","):"",freq:e.freq||"mensile"});}}
   else if(act==="del"){deleteWithUndo(()=>S.expenses,a=>S.expenses=a,t.dataset.id,"Spesa");}
   else if(act==="cat-new"){openCat(null,"exp");}
   else if(act==="cat-edit"){openCat(t.dataset.id,"exp");}

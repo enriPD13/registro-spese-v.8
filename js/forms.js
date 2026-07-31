@@ -15,6 +15,7 @@ function openForm(pre){
   document.getElementById("f-date-label").textContent=f.recurring?"Prima scadenza":"Data";
   document.getElementById("f-cats").innerHTML=S.categories.map(c=>
     '<button class="chip '+(f.categoryId===c.id?"active":"")+'" data-fcat="'+c.id+'">'+esc(c.name)+'</button>').join("");
+  document.getElementById("f-rate").value=(f.rateTot?f.rateTot:"");
   document.getElementById("f-freqs").innerHTML=FREQS.map(x=>
     '<button class="chip '+(f.freq===x.id?"active":"")+'" data-ffreq="'+x.id+'">'+x.label+'</button>').join("");
   document.getElementById("form-overlay").classList.add("open");
@@ -28,6 +29,8 @@ function saveForm(){
   if(!desc)return;
   if(!isVar&&(!amount||amount<=0))return;
   const catBtn=document.querySelector("#f-cats .chip.active");
+  const rt=document.getElementById("f-rate").value.trim();
+  const rateTotV=rec&&rt!==""?Math.max(1,Math.floor(euroNum(rt)||0)):0;
   const freqBtn=document.querySelector("#f-freqs .chip.active");
   const prev=S.editId?S.expenses.find(x=>x.id===S.editId):null;
   const record={
@@ -38,6 +41,7 @@ function saveForm(){
     categoryId:catBtn?catBtn.dataset.fcat:"altro",
     date:document.getElementById("f-date").value||todayISO(),
     recurring:rec,freq:rec?(freqBtn?freqBtn.dataset.ffreq:"mensile"):null,
+    rateTot:rateTotV||null,
   };
   if(S.editId)S.expenses=S.expenses.map(e=>e.id===S.editId?record:e);
   else S.expenses.unshift(record);

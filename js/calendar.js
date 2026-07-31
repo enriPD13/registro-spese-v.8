@@ -439,10 +439,10 @@ function renderAgendaConfig(){
     </div>
     <div class="frow mb">
       <div style="flex:1"><label class="label">Massimo ore per attività</label>
-        <input class="input" id="maxhours" type="number" inputmode="decimal" min="0" max="24" step="0.5"
+        <input class="input" id="maxhours" type="text" inputmode="decimal" min="0" max="24" step="0.5"
           value="${S.calMaxHours||8}" placeholder="nessun limite"></div>
       <div style="flex:1"><label class="label">Giornata intera</label>
-        <input class="input" id="dayhours" type="number" inputmode="decimal" min="1" max="24" step="0.5"
+        <input class="input" id="dayhours" type="text" inputmode="decimal" min="1" max="24" step="0.5"
           value="${S.calDayHours||8}"></div>
     </div>
     <button class="btn btn-ghost" data-act="hours-save" style="width:100%">Salva</button>

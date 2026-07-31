@@ -57,7 +57,7 @@
       <input class="input" id="f-desc" placeholder="Es. Assicurazione moto"></div>
     <div class="frow mb">
       <div><label class="label">Importo (€)</label>
-        <input class="input" id="f-amount" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0,00"></div>
+        <input class="input" id="f-amount" type="text" inputmode="decimal" min="0" step="0.01" placeholder="0,00"></div>
       <div><label class="label" id="f-date-label">Data</label>
         <input class="input" id="f-date" type="date"></div>
     </div>
@@ -69,7 +69,11 @@
         <div class="small">Si ripete e compare in scadenzario e calendario</div></div>
     </div>
     <div class="mb" id="f-freq-wrap" style="display:none"><label class="label">Frequenza</label>
-      <div class="chips" id="f-freqs"></div></div>
+      <div class="chips" id="f-freqs"></div>
+      <label class="label" style="margin-top:14px">Numero di rate (facoltativo)</label>
+      <input class="input" id="f-rate" type="number" inputmode="numeric" min="1" max="600" step="1"
+        placeholder="Lascia vuoto se non ha termine">
+      <div class="small" style="margin-top:5px" id="f-rate-hint">Per un acquisto a rate: indica quante ne sono previste in tutto. L'app smetterà di contarla quando finiscono.</div></div>
     <div class="mb" id="f-var-wrap" style="display:none">
       <div class="toggle" id="f-var-toggle">
         <input type="checkbox" id="f-var" style="width:19px;height:19px;accent-color:var(--accent);pointer-events:none">
@@ -94,7 +98,7 @@
     <div class="mb"><label class="label">Colore etichetta</label>
       <div class="chips" id="c-colors"></div></div>
     <div class="mb" id="c-rate-wrap" style="display:none"><label class="label">% da accantonare (fondo tasse)</label>
-      <input class="input" id="c-rate" type="number" inputmode="decimal" min="0" max="100" step="1" placeholder="Predefinita">
+      <input class="input" id="c-rate" type="text" inputmode="decimal" min="0" max="100" step="1" placeholder="Predefinita">
       <div class="small" style="margin-top:5px">Lascia vuoto per usare la percentuale predefinita. Es. 0 per rimborsi non tassabili.</div></div>
     <div class="frow" style="margin-top:8px">
       <button class="btn btn-ghost" style="flex:1" id="cat-cancel">Annulla</button>
@@ -120,7 +124,7 @@
         <div class="small">Come le bollette: registri l'importo reale a ogni periodo</div></div>
     </div>
     <div class="mb"><label class="label">Importo (€)</label>
-      <input class="input" id="t-amount" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0,00">
+      <input class="input" id="t-amount" type="text" inputmode="decimal" min="0" step="0.01" placeholder="0,00">
       <div class="small" style="margin-top:5px">Facoltativo per le voci variabili, obbligatorio per quelle fisse.</div></div>
     <div class="frow" style="margin-top:8px">
       <button class="btn btn-ghost" style="flex:1" id="tpe-cancel">Annulla</button>
@@ -151,7 +155,7 @@
     <div class="small" id="bill-name" style="margin-bottom:12px"></div>
     <div class="frow mb">
       <div><label class="label">Importo effettivo (€)</label>
-        <input class="input" id="b-amount" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0,00"></div>
+        <input class="input" id="b-amount" type="text" inputmode="decimal" min="0" step="0.01" placeholder="0,00"></div>
       <div><label class="label">Data bolletta</label>
         <input class="input" id="b-date" type="date"></div>
     </div>
@@ -171,7 +175,7 @@
       <input class="input" id="i-desc" placeholder="Es. Fattura Randstad, modulo GOL"></div>
     <div class="frow mb">
       <div><label class="label">Importo (€)</label>
-        <input class="input" id="i-amount" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0,00"></div>
+        <input class="input" id="i-amount" type="text" inputmode="decimal" min="0" step="0.01" placeholder="0,00"></div>
       <div><label class="label" id="i-date-label">Data</label>
         <input class="input" id="i-date" type="date"></div>
     </div>
@@ -185,7 +189,7 @@
     <div class="mb"><label class="label">Categoria</label>
       <div class="chips" id="i-cats"></div></div>
     <div class="mb"><label class="label">% accantonamento (facoltativo)</label>
-      <input class="input" id="i-rate" type="number" inputmode="decimal" min="0" max="100" step="1" placeholder="Usa quella della categoria">
+      <input class="input" id="i-rate" type="text" inputmode="decimal" min="0" max="100" step="1" placeholder="Usa quella della categoria">
       <div class="small" style="margin-top:5px">Compila solo per forzare una percentuale diversa da quella della categoria per questa entrata.</div></div>
     <div class="frow" style="margin-top:8px">
       <button class="btn btn-ghost" style="flex:1" id="inc-cancel">Annulla</button>
@@ -216,9 +220,9 @@
       <input class="input" id="g-name" placeholder="Es. Fondo tasse, Vacanza, Emergenze"></div>
     <div class="frow mb">
       <div><label class="label">Traguardo (€)</label>
-        <input class="input" id="g-target" type="number" inputmode="decimal" min="0" step="1" placeholder="Facoltativo"></div>
+        <input class="input" id="g-target" type="text" inputmode="decimal" min="0" step="1" placeholder="Facoltativo"></div>
       <div><label class="label">Già versato (€)</label>
-        <input class="input" id="g-saved" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0,00"></div>
+        <input class="input" id="g-saved" type="text" inputmode="decimal" min="0" step="0.01" placeholder="0,00"></div>
     </div>
     <div class="mb"><label class="label">Colore</label>
       <div class="chips" id="g-colors"></div></div>
@@ -235,7 +239,7 @@
     <h2 id="move-title">Versa</h2>
     <div class="small" id="move-name" style="margin-bottom:12px"></div>
     <div class="mb"><label class="label">Importo (€)</label>
-      <input class="input" id="mv-amount" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0,00"></div>
+      <input class="input" id="mv-amount" type="text" inputmode="decimal" min="0" step="0.01" placeholder="0,00"></div>
     <div class="frow" style="margin-top:8px">
       <button class="btn btn-ghost" style="flex:1" id="move-cancel">Annulla</button>
       <button class="btn btn-primary" style="flex:2" id="move-save">Conferma</button>
@@ -248,7 +252,7 @@
     <div class="grab"></div>
     <h2>Accantonamento fiscale</h2>
     <div class="mb"><label class="label">Percentuale predefinita</label>
-      <input class="input" id="tx-rate" type="number" inputmode="decimal" min="0" max="100" step="1" placeholder="30">
+      <input class="input" id="tx-rate" type="text" inputmode="decimal" min="0" max="100" step="1" placeholder="30">
       <div class="small" style="margin-top:6px">Si applica alle entrate senza una percentuale propria o di categoria. Puoi impostare aliquote specifiche in "Categorie entrate" e forzarne una sulla singola entrata. Nel forfettario indicativamente 25–35%: verifica col commercialista.</div></div>
     <div class="frow" style="margin-top:8px">
       <button class="btn btn-ghost" style="flex:1" id="tax-cancel">Annulla</button>
@@ -263,7 +267,7 @@
     <h2 id="txmove-title">Registra accantonamento</h2>
     <div class="small" style="margin-bottom:12px">Segna quanto hai davvero messo da parte per le tasse. Usa un importo negativo per correggere.</div>
     <div class="mb"><label class="label">Importo (€)</label>
-      <input class="input" id="txm-amount" type="number" inputmode="decimal" step="0.01" placeholder="0,00"></div>
+      <input class="input" id="txm-amount" type="text" inputmode="decimal" step="0.01" placeholder="0,00"></div>
     <div class="frow" style="margin-top:8px">
       <button class="btn btn-ghost" style="flex:1" id="txmove-cancel">Annulla</button>
       <button class="btn btn-primary" style="flex:2" id="txmove-save">Registra</button>
@@ -355,7 +359,7 @@
     <h2 id="act-title">Attività</h2>
     <div class="small" id="act-when" style="margin-bottom:14px"></div>
     <div class="mb"><label class="label">Ore conteggiate</label>
-      <input class="input" id="a-hours" type="number" inputmode="decimal" min="0" max="24" step="0.5">
+      <input class="input" id="a-hours" type="text" inputmode="decimal" min="0" max="24" step="0.5">
       <div class="small" style="margin-top:5px">Correggi solo questa attività: l'agenda su Google non viene modificata.</div></div>
     <div class="mb"><label class="label">Cliente</label>
       <div class="chips" id="a-rates"></div></div>
@@ -376,7 +380,7 @@
       <input class="input" id="r-name" placeholder="Es. Manpower">
       <div class="small" style="margin-top:5px">Deve comparire nel titolo degli eventi in agenda.</div></div>
     <div class="mb"><label class="label">Tariffa oraria (€)</label>
-      <input class="input" id="r-rate" type="number" inputmode="decimal" min="0" step="0.5" placeholder="45"></div>
+      <input class="input" id="r-rate" type="text" inputmode="decimal" min="0" step="0.5" placeholder="45"></div>
     <div class="mb"><label class="label">Colore</label>
       <div class="chips" id="r-colors"></div></div>
     <div class="mb"><label class="label">Altri modi in cui lo scrivi (facoltativo)</label>
@@ -398,7 +402,7 @@
       considerando le giornate che riesci davvero a lavorare. Le proiezioni future non supereranno questa cifra.
       Lascia vuoto per lasciar stimare l'app dal tuo anno migliore.</div>
     <div class="mb"><label class="label">Tetto annuo (€)</label>
-      <input class="input" id="ceil-val" type="number" inputmode="decimal" min="0" step="500" placeholder="Stimato dall'app"></div>
+      <input class="input" id="ceil-val" type="text" inputmode="decimal" min="0" step="500" placeholder="Stimato dall'app"></div>
     <div class="frow" style="margin-top:8px">
       <button class="btn btn-ghost" style="flex:1" id="ceil-cancel">Annulla</button>
       <button class="btn btn-primary" style="flex:2" id="ceil-save">Salva</button>
